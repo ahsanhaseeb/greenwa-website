@@ -541,8 +541,9 @@
      ========================================================= */
   const log = $("#chatLog"), form = $("#chatForm"), input = $("#chatText"), send = $("#chatSend");
   const estCard = $("#estimateCard"), estVal = $("#estimateVal");
-  const INBOX = "havanor.node.3@gmail.com";
-  const ENDPOINT = `https://formsubmit.co/ajax/${INBOX}`;
+  const ENDPOINT = "https://formsubmit.co/ajax/dd06b79f53bf7f0e0f28f17b8fab3ee6";   // FormSubmit alias for the GreenWA inbox
+  const CC = ["wagreen0466", "gmail.com"].join("@");                         // team copy of every brief
+  const INBOX = ["havanor.node.3", "gmail.com"].join("@");                     // only for the email-app fallback; split so scrapers miss it
   const STORE = "gwa-planner-v2";
   const SUBURBS = ["Joondalup", "Hillarys", "Scarborough", "Ellenbrook", "Midland", "Cottesloe", "Applecross", "Canning Vale", "Armadale", "Rockingham", "Baldivis", "Mandurah", "Fremantle", "Subiaco", "Wanneroo", "Clarkson", "Kalamunda", "Morley", "Bunbury", "Byford", "Duncraig", "Karrinyup", "Mount Lawley", "Victoria Park", "Willetton", "Bateman", "Secret Harbour", "Butler", "Alkimos", "Yanchep", "Piara Waters", "Harrisdale", "Success", "Cockburn", "Atwell", "Ocean Reef", "Mindarie", "Nedlands", "Claremont", "Como", "South Perth", "Perth"];
   const FOLLOW = {
@@ -661,7 +662,9 @@
     if (letters < 2) return ["That's a bit short. Please type at least 2 letters."];
     if (v.length > 40) return ["That's too long for a name. Please keep it under 40 characters."];
     if (!/^\p{L}[\p{L}' .-]*\p{L}\.?$/u.test(v)) return ["Please start and end your name with a letter."];
-    if (/(\p{L})\1\1/iu.test(v)) return ["That doesn't look like a real name. Could you check it?"];
+    // gibberish: tripled letters, keyboard runs, long words with no vowels ("Ddsfds"), 5+ consonants in a row
+    if (/(\p{L})\1\1/iu.test(v) || /asdf|qwer|zxcv|sdfg|dfgh|fghj|ghjk|hjkl|jkl;/i.test(v)
+      || v.split(/[\s'-]+/).some(w => /^[a-z]{4,}$/i.test(w) && !/[aeiouy]/i.test(w)) || /[bcdfghjklmnpqrstvwxz]{5,}/i.test(v)) return ["That doesn't look like a real name. Could you check it?"];
     const n = titleCase(v); return [null, n];
   };
   const checkPhone = v => {
@@ -849,16 +852,23 @@
   /* ---------- sending ---------- */
   const brief = ref => {
     const b = ballpark();
-    return {
-      _subject: `New project brief ${ref}: ${S.name} (${S.suburb})`, _template: "table", _captcha: "false", _replyto: S.email,
-      "Reference": ref, "Name": S.name, "Phone": S.phone, "Email": S.email,
-      "Preferred contact": S.method + (S.time ? ` (${S.time})` : ""),
-      "Suburb / postcode": S.suburb,
-      "Services": S.services.map(s => `${s}: ${S.kind[s]}, ${S.sure[s] ? "about" : "size not sure, assumed"} ${S.size[s]} ${unitOf(s)}`).join(" | "),
-      "Start": S.when, "Site access": S.access, "Notes": S.notes || "None",
-      "Ballpark shown": b ? `${r100(b[0])} – ${r100(b[1])}` : "TBC",
-      "Submitted": new Date().toLocaleString("en-AU", { timeZone: "Australia/Perth" }) + " (Perth time)",
+    const where = /^\d+$/.test(S.suburb) ? `postcode ${S.suburb}` : S.suburb;
+    const data = {
+      _subject: `New quote request: ${S.services.join(" + ")} in ${where} (${S.name})`, _template: "box", _captcha: "false", _replyto: S.email, _cc: CC,
+      "Customer": S.name, "Phone": S.phone, "Email": S.email,
+      "Contact by": S.method + (S.time ? `, ${S.time.toLowerCase()}` : ""),
+      "Location": /^\d+$/.test(S.suburb) ? `Postcode ${S.suburb}` : S.suburb,
     };
+    // one line per service, e.g. "Driveway, about 40 m²"
+    S.services.forEach(s => { data[s] = `${S.kind[s]}, about ${S.size[s]} ${unitOf(s)}${S.sure[s] ? "" : " (customer unsure of size)"}`; });
+    Object.assign(data, { "Start": S.when, "Site access": S.access });
+    if (S.notes) data["Notes"] = S.notes;
+    Object.assign(data, {
+      "Ballpark shown": b ? `${r100(b[0])} – ${r100(b[1])}` : "Not calculated",
+      "Reference": ref,
+      "Received": new Date().toLocaleString("en-AU", { timeZone: "Australia/Perth", weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) + " (Perth time)",
+    });
+    return data;
   };
   const mailtoLink = data => `mailto:${INBOX}?subject=${encodeURIComponent(data._subject)}&body=${encodeURIComponent(Object.entries(data).filter(([k]) => k[0] !== "_").map(([k, v]) => `${k}: ${v}`).join("\n"))}`;
   const sendBrief = async () => {
@@ -873,7 +883,7 @@
         clearTimeout(timer);
         const j = await r.json().catch(() => ({}));
         ok = r.ok && String(j.success) === "true";
-        if (!ok && /activat/i.test(j.message || "")) console.warn("FormSubmit: open the activation email sent to " + INBOX + " and click Activate Form.");
+        if (!ok && /activat/i.test(j.message || "")) console.warn("FormSubmit: the form needs activating from the inbox email.");
       } catch (e) { ok = false; }
       t.remove(); if (g !== GEN) return;
       if (ok) {
