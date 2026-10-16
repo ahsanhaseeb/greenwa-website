@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GreenWA — Paving, Retaining Walls, Turf &amp; Landscaping in Perth</title>
 <meta name="description" content="GreenWA builds paving, retaining walls, turf and landscapes across Perth — layer by layer, from compacted base to finished surface.">
-<meta name="theme-color" content="#2BB02A">
+<meta name="theme-color" content="#00D10F">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
 <body>
 
 <div class="loader" id="loader" aria-hidden="true">
-  <svg viewBox="0 0 120 120"><path class="l1" d="M98 56 L60 20 L22 56 V102 H98 V74 H70" pathLength="1"/><path class="l2" d="M74 44 V80 Q74 92 61 92 Q50 92 47 82" pathLength="1"/></svg>
+  <svg viewBox="140 -10 220 220"><path class="l1" d="M283.5 57.5 L251 25 L174.5 101.5 V166 H250" pathLength="1"/><path class="l2" d="M258 116 H328 V142 A41 41 0 0 1 287 183 H258" pathLength="1"/></svg>
   <span class="loader-word">Green<b>WA</b></span>
 </div>
 <div class="cursor" id="cursor" aria-hidden="true"></div>
@@ -37,14 +37,32 @@
     <a href="#faq">FAQ</a>
   </nav>
   <a class="btn btn-solid nav-cta" href="#quote" data-start-chat>Get a quote</a>
-  <button class="nav-burger" aria-label="Open menu" aria-expanded="false"><span></span><span></span></button>
+  <button class="nav-burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span></button>
 </header>
+<div class="drawer-scrim" data-close-menu></div>
+<aside class="drawer" id="drawer" aria-label="Menu" aria-hidden="true" inert>
+  <div class="drawer-top">
+    <a class="brand" href="#top" aria-label="GreenWA home"><svg class="logo-mark" viewBox="0 0 120 120" aria-hidden="true"><use href="#logo"/></svg><span class="wordmark">Green<b>WA</b></span></a>
+    <button class="drawer-close" type="button" aria-label="Close menu" data-close-menu><span></span><span></span></button>
+  </div>
+  <nav class="drawer-links" aria-label="Mobile">
+    <a href="#layers" style="--i:0">How we build<span aria-hidden="true">&rarr;</span></a>
+    <a href="#services" style="--i:1">Services<span aria-hidden="true">&rarr;</span></a>
+    <a href="#process" style="--i:2">Process<span aria-hidden="true">&rarr;</span></a>
+    <a href="#work" style="--i:3">Work<span aria-hidden="true">&rarr;</span></a>
+    <a href="#faq" style="--i:4">FAQ<span aria-hidden="true">&rarr;</span></a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="btn btn-solid" href="#quote" data-start-chat>Get a free quote</a>
+    <p>Ballpark price in about 60 seconds, then a free site visit.</p>
+  </div>
+</aside>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="logo" viewBox="0 0 120 120">
-      <path d="M98 56 L60 20 L22 56 V102 H98 V74 H70" fill="none" stroke="var(--brand)" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
-      <path d="M74 44 V80 Q74 92 61 92 Q50 92 47 82" fill="none" stroke="var(--ink)" stroke-width="10" stroke-linecap="round"/>
+    <symbol id="logo" viewBox="150 -6 203 212">
+      <path d="M251 0.25 L296 45 L271 70 L251 50 L192 109 V148.5 H250 V183.5 H157 V94 Z" fill="var(--logo)"/>
+      <path d="M258 98 H345.5 V142 A58.5 58.5 0 0 1 287 200.5 H258 V166.5 H287 A24.5 24.5 0 0 0 311.5 142 V134 H258 Z" fill="var(--ink)"/>
     </symbol>
   </defs>
 </svg>
@@ -55,6 +73,7 @@
 <section class="hero" id="top">
   <div class="hero-media" aria-hidden="true">
     <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=70" alt="" fetchpriority="high">
+    <div class="hero-veil"></div>
   </div>
   <div class="hero-inner">
     <p class="eyebrow live"><span class="pulse"></span><span id="season-line">Perth outdoor builds · booking now</span></p>
@@ -101,27 +120,30 @@
       <h2 id="mark-h" data-split>Every stroke of our mark <em>is a trade we do.</em></h2>
     </div>
     <div class="mark-stage">
-      <svg class="mark-svg" viewBox="0 0 120 120" aria-hidden="true">
-        <path class="mk-ghost" d="M22 56 L60 20 L98 56 M22 56 V102 H98 V74 H70 M74 44 V80 Q74 92 61 92 Q50 92 47 82"/>
-        <path class="mk-fill" d="M22 56 L60 20 L98 56 V102 H22 Z"/>
-        <path class="mk mk-g" data-seg="0" pathLength="1" d="M22 56 L60 20 L98 56"/>
-        <path class="mk mk-g" data-seg="1" pathLength="1" d="M22 56 V102"/>
-        <path class="mk mk-g" data-seg="2" pathLength="1" d="M22 102 H98 V74 H70"/>
-        <path class="mk mk-j" data-seg="3" pathLength="1" d="M74 44 V80 Q74 92 61 92 Q50 92 47 82"/>
+      <svg class="mark-svg" viewBox="140 -10 220 220" aria-hidden="true">
+        <path class="mk-fill" d="M192 109 L251 50 L318 117 V148.5 H192 Z"/>
+        <mask id="mkErase" maskUnits="userSpaceOnUse" x="140" y="-10" width="220" height="220">
+          <rect x="140" y="-10" width="220" height="220" fill="#fff"/>
+          <path class="mke mke-g" pathLength="1" d="M285.62 59.62 L251 25 L174.5 101.5 V166 H253"/>
+          <path class="mke mke-j" pathLength="1" d="M255 116 H328 V142 A41 41 0 0 1 287 183 H255"/>
+        </mask>
+        <path class="mk-ghost" mask="url(#mkErase)" d="M251 0.25 L296 45 L271 70 L251 50 L192 109 V148.5 H250 V183.5 H157 V94 Z M258 98 H345.5 V142 A58.5 58.5 0 0 1 287 200.5 H258 V166.5 H287 A24.5 24.5 0 0 0 311.5 142 V134 H258 Z"/>
+        <path class="mk mk-g" pathLength="1" d="M283.5 57.5 L251 25 L174.5 101.5 V166 H250"/>
+        <path class="mk mk-j" pathLength="1" d="M258 116 H328 V142 A41 41 0 0 1 287 183 H258"/>
       </svg>
-      <button class="pin pin-top" data-pin="0" data-ask="Landscaping" style="--x:60;--y:20">
+      <button class="pin pin-top" data-pin="0" data-ask="Landscaping" style="--x:50.45;--y:15.9">
         <span class="pin-dot">1</span>
         <span class="pin-card"><span class="mono">Roof · the big picture</span><b>Landscaping</b><small>Design, planting, edging and lighting under one plan.</small></span>
       </button>
-      <button class="pin pin-left" data-pin="1" data-ask="Retaining walls" style="--x:22;--y:79">
+      <button class="pin pin-left" data-pin="1" data-ask="Retaining walls" style="--x:15.68;--y:65.45">
         <span class="pin-dot">2</span>
         <span class="pin-card"><span class="mono">Walls · holding the ground</span><b>Retaining walls</b><small>Limestone and block walls, drained and built to last.</small></span>
       </button>
-      <button class="pin pin-bottom" data-pin="2" data-ask="Paving" style="--x:46;--y:102">
+      <button class="pin pin-bottom" data-pin="2" data-ask="Paving" style="--x:32.73;--y:80">
         <span class="pin-dot">3</span>
         <span class="pin-card"><span class="mono">Floor · the base of it all</span><b>Paving</b><small>Driveways, alfresco and pool surrounds on a compacted base.</small></span>
       </button>
-      <button class="pin pin-right" data-pin="3" data-ask="Turf & lawns" style="--x:74;--y:60">
+      <button class="pin pin-right" data-pin="3" data-ask="Turf & lawns" style="--x:85.45;--y:68.18">
         <span class="pin-dot">4</span>
         <span class="pin-card"><span class="mono">Inside · what you live on</span><b>Turf &amp; lawns</b><small>Fresh roll-on turf, laid level and watered in.</small></span>
       </button>
@@ -213,73 +235,42 @@
   </div>
 </section>
 
-<!-- ===== Wall + Turf scroll animations ===== -->
+<!-- ===== Wall + Turf: pinned 3D build scenes ===== -->
 <section class="builds" aria-label="How walls and lawns are built">
-  <div class="build" id="wallBuild">
-    <div class="build-copy">
-      <p class="eyebrow">Retaining walls</p>
-      <h2 data-split>Course by course,<br><em>drainage first.</em></h2>
-      <p>A wall fails from the water behind it, not the blocks. We pour a footing, lay ag pipe in clean gravel, then stack and backfill one course at a time, with capping to finish.</p>
-      <p class="mono tag" id="wallTag">FOOTING</p>
+  <div class="build-pin" id="wallBuild">
+    <div class="build">
+      <div class="build-copy">
+        <p class="eyebrow">Retaining walls</p>
+        <h2 data-split>Course by course,<br><em>drainage first.</em></h2>
+        <p>A wall fails from the water behind it, not the blocks. We pour a footing, lay ag pipe in clean gravel, then stack and backfill one course at a time, with capping to finish.</p>
+        <p class="mono tag" id="wallTag">Footing</p>
+        <div class="build-bar"><span id="wallBar"></span></div>
+      </div>
+      <div class="build-stage" role="img" aria-label="3D retaining wall being built course by course, with gravel drainage and backfill"><div class="stage-deco" aria-hidden="true"><span class="deco-cap">Section A–A · retaining wall</span><span class="deco-scale"><i></i>NTS</span></div><div class="scene" id="wallScene"></div></div>
     </div>
-    <svg class="build-svg" viewBox="0 0 600 420" role="img" aria-label="Animated retaining wall being built course by course">
-      <defs>
-        <pattern id="soilP" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="var(--soil)"/><circle cx="4" cy="5" r="1.4" fill="var(--soil-dark)"/><circle cx="11" cy="11" r="1" fill="var(--soil-dark)"/></pattern>
-        <pattern id="gravelP" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="var(--base)"/><circle cx="4" cy="4" r="3" fill="var(--base-light)"/><circle cx="12" cy="10" r="3.4" fill="var(--base-dark)"/><circle cx="5" cy="13" r="2" fill="var(--base-light)"/></pattern>
-      </defs>
-      <!-- ground -->
-      <rect x="0" y="360" width="600" height="60" fill="url(#soilP)"/>
-      <!-- retained soil (behind) -->
-      <path id="wallSoil" d="M330 120 L600 120 L600 360 L330 360 Z" fill="url(#soilP)" opacity=".9"/>
-      <!-- footing -->
-      <rect id="wallFooting" x="150" y="340" width="230" height="22" rx="2" fill="var(--concrete)"/>
-      <!-- gravel drainage zone -->
-      <rect id="wallGravel" x="300" y="120" width="60" height="222" fill="url(#gravelP)"/>
-      <!-- ag pipe -->
-      <circle cx="330" cy="328" r="11" fill="none" stroke="var(--ink)" stroke-width="5" id="agPipe" pathLength="1"/>
-      <g id="wallBlocks"></g>
-      <rect id="wallCap" x="160" y="104" width="160" height="18" rx="3" fill="var(--limestone-dark)"/>
-      <!-- grass on top -->
-      <g id="wallGrass"></g>
-    </svg>
   </div>
 
-  <div class="build build-rev" id="turfBuild">
-    <div class="build-copy">
-      <p class="eyebrow">Turf &amp; lawns</p>
-      <h2 data-split>Prep the soil. Roll it out. <em>Watch it take.</em></h2>
-      <p>We rip out the old, add soil improver, laser-level it and lay fresh-cut rolls the same day they're harvested, joints staggered like brickwork.</p>
-      <p class="mono tag" id="turfTag">SOIL PREP</p>
+  <div class="build-pin" id="turfBuild">
+    <div class="build build-rev">
+      <div class="build-copy">
+        <p class="eyebrow">Turf &amp; lawns</p>
+        <h2 data-split>Prep the soil. Roll it out. <em>Watch it take.</em></h2>
+        <p>We rip out the old, add soil improver, laser-level it and lay fresh-cut rolls the same day they're harvested, joints staggered like brickwork.</p>
+        <p class="mono tag" id="turfTag">Soil prep</p>
+        <div class="build-bar"><span id="turfBar"></span></div>
+      </div>
+      <div class="build-stage" role="img" aria-label="3D lawn: soil improver spread, turf rolls unrolled and the grass grows in"><div class="stage-deco" aria-hidden="true"><span class="deco-cap">Plan · roll-on turf layout</span><span class="deco-scale"><i></i>NTS</span></div><div class="scene" id="turfScene"></div><div class="drops" id="turfDrops"></div></div>
     </div>
-    <svg class="build-svg" viewBox="0 0 600 420" role="img" aria-label="Animated turf roll unrolling and grass growing">
-      <defs>
-        <clipPath id="turfClip"><rect id="turfClipRect" x="40" y="200" width="0" height="80"/></clipPath>
-        <linearGradient id="turfG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--grass-light)"/><stop offset="1" stop-color="var(--grass)"/></linearGradient>
-      </defs>
-      <rect x="0" y="280" width="600" height="140" fill="url(#soilP)"/>
-      <rect id="improver" x="40" y="262" width="520" height="20" fill="var(--soil-dark)" opacity="0"/>
-      <g clip-path="url(#turfClip)">
-        <rect x="40" y="248" width="520" height="34" fill="url(#turfG)"/>
-        <g id="turfSeams" stroke="var(--grass-dark)" stroke-width="2"></g>
-        <g id="blades"></g>
-      </g>
-      <g id="turfRoll">
-        <circle cx="0" cy="0" r="34" fill="var(--grass)"/>
-        <circle cx="0" cy="0" r="26" fill="none" stroke="var(--soil-dark)" stroke-width="5" stroke-dasharray="20 9"/>
-        <circle cx="0" cy="0" r="14" fill="none" stroke="var(--grass-dark)" stroke-width="4"/>
-        <circle cx="0" cy="0" r="5" fill="var(--soil-dark)"/>
-      </g>
-    </svg>
   </div>
 </section>
 
 <!-- ===== Process ===== -->
 <section class="process" id="process" aria-labelledby="process-h">
-  <div class="wrap">
+  <div class="wrap process-sticky">
     <p class="eyebrow">How a job runs</p>
     <h2 id="process-h" data-split>From first call to <em>first barbecue.</em></h2>
     <div class="steps" id="steps">
-      <svg class="steps-path" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path d="M10 20 H990" pathLength="1" id="stepsLine"/></svg>
+      <div class="steps-line" aria-hidden="true"><span id="stepsLine"></span></div>
       <div class="step"><span class="mono">01 · Site visit</span><h3>We walk it with you</h3><p>Levels, soil, access, drainage, and what you actually want to do out there. It's free and there's no pressure.</p></div>
       <div class="step"><span class="mono">02 · Written quote</span><h3>Itemised, not vague</h3><p>Materials, depths, square metres and timeline, all in writing. You'll know exactly what's going under the surface.</p></div>
       <div class="step"><span class="mono">03 · Prep</span><h3>The part you don't see</h3><p>Excavation, compaction, drainage and edging. This is where most cheap jobs cut corners, and where we don't.</p></div>
@@ -296,14 +287,14 @@
     <p class="muted">Inspiration images. Swap in GreenWA project photos before launch.</p>
   </div>
   <div class="gallery" id="gallery">
-    <figure class="g g-tall" data-speed="-0.08"><img loading="lazy" src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=70" alt="Pool with pale paved surround in front of a white home"><figcaption>Pool surround</figcaption></figure>
-    <figure class="g" data-speed="0.06"><img loading="lazy" src="https://images.unsplash.com/photo-1592595896551-12b371d546d5?auto=format&fit=crop&w=900&q=70" alt="Front lawn and footpath beside a brick home"><figcaption>Front lawn</figcaption></figure>
-    <figure class="g" data-speed="-0.04"><img loading="lazy" src="https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=900&q=70" alt="Top-down view of a timber deck courtyard with outdoor seating and pots"><figcaption>Courtyard</figcaption></figure>
-    <figure class="g g-wide" data-speed="0.1"><img loading="lazy" src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1400&q=70" alt="Modern house with lawn and stepping-stone pavers"><figcaption>Lawn &amp; stepping pavers</figcaption></figure>
-    <figure class="g" data-speed="-0.06"><img loading="lazy" src="https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=900&q=70" alt="Wide paved driveway in front of a double garage"><figcaption>Driveway</figcaption></figure>
-    <figure class="g g-tall" data-speed="0.08"><img loading="lazy" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=70" alt="Backyard lawn at dusk beside a modern home"><figcaption>Backyard lawn</figcaption></figure>
-    <figure class="g" data-speed="-0.05"><img loading="lazy" src="https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=900&q=70" alt="Lush green garden with ferns and flowering plants"><figcaption>Garden planting</figcaption></figure>
-    <figure class="g" data-speed="0.05"><img loading="lazy" src="https://images.unsplash.com/photo-1628744448840-55bdb2497bd4?auto=format&fit=crop&w=900&q=70" alt="Paved concrete entry leading to a modern front door"><figcaption>Entry paving</figcaption></figure>
+    <figure class="g g-tall" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=70" alt="Pool with pale paved surround in front of a white home"><figcaption>Pool surround</figcaption></figure>
+    <figure class="g" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1592595896551-12b371d546d5?auto=format&fit=crop&w=900&q=70" alt="Front lawn and footpath beside a brick home"><figcaption>Front lawn</figcaption></figure>
+    <figure class="g" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=900&q=70" alt="Top-down view of a timber deck courtyard with outdoor seating and pots"><figcaption>Courtyard</figcaption></figure>
+    <figure class="g g-wide" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=1400&q=70" alt="Modern house with lawn and stepping-stone pavers"><figcaption>Lawn &amp; stepping pavers</figcaption></figure>
+    <figure class="g" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=900&q=70" alt="Wide paved driveway in front of a double garage"><figcaption>Driveway</figcaption></figure>
+    <figure class="g g-tall" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=70" alt="Backyard lawn at dusk beside a modern home"><figcaption>Backyard lawn</figcaption></figure>
+    <figure class="g" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=900&q=70" alt="Lush green garden with ferns and flowering plants"><figcaption>Garden planting</figcaption></figure>
+    <figure class="g" tabindex="0" role="button"><img loading="lazy" src="https://images.unsplash.com/photo-1628744448840-55bdb2497bd4?auto=format&fit=crop&w=900&q=70" alt="Paved concrete entry leading to a modern front door"><figcaption>Entry paving</figcaption></figure>
   </div>
 </section>
 
@@ -396,6 +387,12 @@
   <span class="fab-dot"></span> Plan my project
 </a>
 
+<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Project photo" hidden>
+  <figure class="lb-fig"><img alt=""><figcaption><span class="lb-cap"></span><span class="lb-count"></span></figcaption></figure>
+  <button class="lb-btn lb-close" type="button" aria-label="Close">&times;</button>
+  <button class="lb-btn lb-prev" type="button" aria-label="Previous photo">&larr;</button>
+  <button class="lb-btn lb-next" type="button" aria-label="Next photo">&rarr;</button>
+</div>
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
 <script src="js/main.js"></script>
 </body>

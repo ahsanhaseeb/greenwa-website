@@ -39,12 +39,24 @@
   $$('a[href^="#"]').forEach(a => a.addEventListener("click", e => {
     const t = a.getAttribute("href"); if (t.length < 2) return;
     const el = $(t); if (!el) return;
-    e.preventDefault(); goTo(el); nav.classList.remove("open");
+    e.preventDefault(); setMenu(false); goTo(el);
   }));
 
   /* ---------- nav ---------- */
   const nav = $("#nav");
-  $(".nav-burger").addEventListener("click", e => { const o = nav.classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", o); });
+  // mobile sidebar menu
+  const drawer = $("#drawer"), burger = $(".nav-burger");
+  function setMenu(open) {
+    if (document.body.classList.contains("menu-open") === open) return;
+    document.body.classList.toggle("menu-open", open);
+    drawer.setAttribute("aria-hidden", !open); drawer.inert = !open; burger.setAttribute("aria-expanded", open);
+    if (open) { lenis && lenis.stop(); document.documentElement.style.overflow = "hidden"; setTimeout(() => $(".drawer-links a", drawer).focus({ preventScroll: true }), 350); }
+    else { lenis && lenis.start(); document.documentElement.style.overflow = ""; }
+  }
+  burger.addEventListener("click", () => setMenu(true));
+  $$("[data-close-menu]").forEach(b => b.addEventListener("click", () => { setMenu(false); burger.focus({ preventScroll: true }); }));
+  addEventListener("keydown", e => { if (e.key === "Escape" && document.body.classList.contains("menu-open")) { setMenu(false); burger.focus({ preventScroll: true }); } });
+  addEventListener("resize", () => { if (innerWidth > 960) setMenu(false); });
   let lastY = 0;
 
   /* ---------- hero bricks ---------- */
@@ -105,11 +117,11 @@
      ========================================================= */
   const iso = $("#iso"), layersSec = $("#layers"), layerLis = $$("#layerList li"), stamp = $("#stamp"), bar = $("#layersBar");
   const LAYERS = [
-    { cls: "slab-subgrade", h: .17, name: "Subgrade · compacted" },
-    { cls: "slab-fabric",   h: .02, name: "Geotextile" },
-    { cls: "slab-base",     h: .13, name: "Road base · 100 mm" },
-    { cls: "slab-sand",     h: .055, name: "Bedding sand · 30 mm" },
-    { cls: "slab-pavers",   h: .07, name: "Pavers · 60 mm" },
+    { cls: "slab-subgrade", h: .17, name: "Subgrade · compacted", short: "Subgrade" },
+    { cls: "slab-fabric",   h: .02, name: "Geotextile", short: "Geotextile" },
+    { cls: "slab-base",     h: .13, name: "Road base · 100 mm", short: "Road base" },
+    { cls: "slab-sand",     h: .055, name: "Bedding sand · 30 mm", short: "Bedding sand" },
+    { cls: "slab-pavers",   h: .07, name: "Pavers · 60 mm", short: "Pavers" },
   ];
   let slabs = [], pavers = [], labels = [], U = 400;
   const labelBox = document.createElement("div"); labelBox.className = "labels"; iso.parentElement.appendChild(labelBox);
@@ -125,9 +137,9 @@
     LAYERS.forEach((L, i) => {
       const s = document.createElement("div"); s.className = "slab " + L.cls;
       s.style.setProperty("--h", (L.h * U).toFixed(1) + "px");
-      s.innerHTML = `<div class="face top"></div><div class="face front"></div><div class="face side"></div>`;
+      s.innerHTML = `<div class="face top"></div><div class="face front"><i class="anc"></i></div><div class="face side"></div>`;
       iso.appendChild(s); slabs.push(s);
-      const lb = document.createElement("span"); lb.className = "label"; lb.textContent = L.name; labelBox.appendChild(lb); labels.push(lb);
+      const lb = document.createElement("span"); lb.className = "label"; lb.textContent = vw < 561 ? L.short : L.name; labelBox.appendChild(lb); labels.push(lb);
     });
     // stretcher-bond pavers on the top face of the last slab
     const top = $(".slab-pavers .top", iso), ROWS = 8, COLS = 5;
@@ -153,10 +165,8 @@
     const combine = ease(seg(p, 0.74, 0.88));
     const squash = Math.sin(seg(p, 0.86, 0.93) * Math.PI) * 0.09;   // the stack "thuds" as it locks
     // camera: slow orbit across the scroll + idle sway + pointer tilt
-    const now = performance.now() / 1000;
-    tiltX += (tiltTX - tiltX) * 0.06; tiltY += (tiltTY - tiltY) * 0.06;
-    const rx = lerp(66, 54, ease(p)) - tiltY * 10 + Math.sin(now * 0.7) * 1.2;
-    const rz = lerp(-58, -30, ease(p)) + tiltX * 16 + Math.sin(now * 0.45) * 2.5;
+    const rx = lerp(66, 54, ease(p)) - tiltY * 10;
+    const rz = lerp(-58, -30, ease(p)) + tiltX * 16;
     iso.style.transform = reduce ? "" : `rotateX(${rx.toFixed(2)}deg) rotateZ(${rz.toFixed(2)}deg)`;
     motes.style.opacity = clamp(seg(p, 0.02, 0.1)) * (1 - seg(p, 0.86, 0.96));
     shadow.style.opacity = (0.35 + 0.45 * clamp(seg(p, 0.03, 0.13))).toFixed(2);
@@ -169,17 +179,28 @@
       if (t > 0.02) current = i;
       const rest = lerp(exploded, compact, combine) * (1 - squash);
       const zz = lerp(rest + U * 1.1, rest, tb);
-      const spin = (1 - t) * (i % 2 ? -28 : 28), slide = (1 - t) * U * 0.25 * (i % 2 ? 1 : -1);
-      const bob = (1 - combine) * t * Math.sin(now * 1.3 + i * 1.1) * U * 0.012;   // exploded layers float a little
-      s.style.transform = `translate3d(${slide.toFixed(1)}px,0,${(zz + bob).toFixed(1)}px) rotateZ(${spin.toFixed(1)}deg)`;
+      // phones: the stack sits near the left edge, so layers fly in from the right with a gentler spin (no clipping)
+      const narrow = vw < 561, spin = (1 - t) * (narrow ? 12 : 28) * (i % 2 ? -1 : 1), slide = (1 - t) * U * 0.25 * (narrow || i % 2 ? 1 : -1);
+      s.style.transform = `translate3d(${slide.toFixed(1)}px,0,${zz.toFixed(1)}px) rotateZ(${spin.toFixed(1)}deg)`;
       s.style.visibility = raw > 0.001 ? "visible" : "hidden";   // no opacity: it would flatten the 3D slab
-      const lb = labels[i], show = t > 0.9 && combine < 0.3;
-      lb.classList.toggle("on", show);
-      if (show) {                       // pin the label to the slab's projected right corner
-        const sr = $(".top", s).getBoundingClientRect(), pr = labelBox.getBoundingClientRect();
-        lb.style.transform = `translate(${(sr.right - pr.left + 14).toFixed(0)}px,${(sr.top + sr.height * 0.42 - pr.top).toFixed(0)}px)`;
-      }
+      labels[i].classList.toggle("on", t > 0.9);
     });
+    // labels stay on after the stack locks; when the slabs close up, labels fan out so they never overlap,
+    // and each leader line angles back to the exact point on its slab
+    const pr = labelBox.getBoundingClientRect(), on = [];
+    slabs.forEach((s, i) => { if (labels[i].classList.contains("on")) { const ar = $(".anc", s).getBoundingClientRect(); on.push({ lb: labels[i], x: ar.left - pr.left, y: ar.top - pr.top }); } });
+    if (on.length) {
+      const gap = parseFloat(getComputedStyle(on[0].lb).getPropertyValue("--gap")) || 30, H = on[0].lb.offsetHeight + 5;
+      on.sort((a, b) => a.y - b.y);
+      let prev = -1e9;
+      on.forEach(o => {
+        const ly = Math.max(o.y, prev + H); prev = ly;
+        const dy = o.y - ly, len = Math.hypot(gap, dy);
+        o.lb.style.transform = `translate(${(o.x + gap).toFixed(1)}px,${(ly - o.lb.offsetHeight / 2).toFixed(1)}px)`;
+        o.lb.style.setProperty("--dy", dy.toFixed(1) + "px"); o.lb.style.setProperty("--len", len.toFixed(1) + "px");
+        o.lb.style.setProperty("--ang", Math.atan2(-dy, gap).toFixed(4) + "rad");
+      });
+    }
     // pavers drop one by one once the paver slab is placed
     const pp = seg(p, 0.55, 0.72);
     pavers.forEach(el => {
@@ -202,91 +223,214 @@
   const svcSec = $("#services"), track = $("#hTrack");
   const servicesScene = p => {
     const dist = Math.max(0, track.scrollWidth - vw);
-    track.style.transform = `translate3d(${(-dist * ease(seg(p, 0.05, 0.95))).toFixed(1)}px,0,0)`;
+    track.style.transform = `translate3d(${(-dist * seg(p, 0.04, 0.96)).toFixed(1)}px,0,0)`;
   };
+  // pin length = exactly the sideways distance (1px scroll = 1px slide) plus a short hold, so the last card does not linger
+  const sizeServices = () => { svcSec.style.height = Math.round(Math.max(0, track.scrollWidth - innerWidth) * 1.08 + innerHeight) + "px"; };
+  sizeServices(); addEventListener("load", sizeServices);
 
-  /* =========================================================
-     RETAINING WALL — course by course
-     ========================================================= */
-  const NS = "http://www.w3.org/2000/svg";
-  const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
-  const wallG = $("#wallBlocks"), COURSES = 5, CH = (340 - 122) / COURSES, courses = [];
-  for (let r = 0; r < COURSES; r++) {
-    const g = mk("g", { class: "course" }, wallG), y = 340 - (r + 1) * CH, off = r % 2 ? 40 : 0;
-    for (let x = 160 - off; x < 320; x += 80) {
-      const x0 = Math.max(160, x), x1 = Math.min(320, x + 80);
-      mk("rect", { x: x0 + 1.5, y: y + 1.5, width: x1 - x0 - 3, height: CH - 3, rx: 3, fill: (r + x / 80) % 2 ? "var(--limestone)" : "#DCCCA6" }, g);
-      mk("line", { x1: x0 + 6, y1: y + CH * .35, x2: x1 - 10, y2: y + CH * .35, stroke: "#CDBB90", "stroke-width": 1.5, "stroke-linecap": "round" }, g);
+  /* ---------- material textures: painted once, reused as images (cheap to render) ---------- */
+  const tex = (name, base, draw) => {
+    const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+    g.fillStyle = base; g.fillRect(0, 0, 128, 128); draw(g);
+    document.documentElement.style.setProperty("--tx-" + name, `url(${c.toDataURL()})`);
+  };
+  const R = Math.random, dots = (g, n, cols, r0, r1) => { for (let i = 0; i < n; i++) { g.fillStyle = cols[i % cols.length]; const x = R() * 128, y = R() * 128, r = r0 + R() * (r1 - r0); for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128]]) { g.beginPath(); g.arc(x + dx, y + dy, r, 0, 7); g.fill(); } } };
+  tex("soil", "#7A5A3E", g => dots(g, 260, ["#5A3F2A", "#8C6A4B", "#6A4C33", "#9A7A58"], 0.8, 2.2));
+  tex("gravel", "#8C887E", g => dots(g, 170, ["#A9A59B", "#6E6A61", "#C9C4B6", "#7D796F", "#B8B3A6"], 2, 4.6));
+  tex("concrete", "#B7B6AE", g => dots(g, 420, ["rgba(0,0,0,.12)", "rgba(255,255,255,.35)"], 0.5, 1.2));
+  tex("lime", "#E6D9B6", g => { dots(g, 140, ["rgba(150,125,80,.28)", "rgba(255,255,255,.4)", "rgba(120,100,60,.18)"], 0.6, 1.8); });
+  tex("improver", "#3F2C1C", g => dots(g, 300, ["#2A1D12", "#6B4E31", "#57402A"], 0.8, 2));
+  tex("grass", "#48A333", g => {
+    for (let i = 0; i < 900; i++) {
+      const x = R() * 128, y = R() * 128, l = 3 + R() * 6, a = -Math.PI / 2 + (R() - 0.5) * 0.9;
+      g.strokeStyle = ["#2E7F22", "#5DB83F", "#7FD05A", "#3B9128", "#9BE070"][i % 5]; g.lineWidth = 1 + R() * 0.8;
+      for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128]]) { g.beginPath(); g.moveTo(x + dx, y + dy); g.lineTo(x + dx + Math.cos(a) * l, y + dy + Math.sin(a) * l); g.stroke(); }
     }
-    courses.push({ g, y });
-  }
-  const wallGrass = $("#wallGrass");
-  for (let i = 0; i < 70; i++) {
-    const x = 160 + i * 6.3 + Math.random() * 3, h = 8 + Math.random() * 12;
-    mk("path", { d: `M${x} 104 q${(Math.random() - .5) * 6} ${-h / 2} ${(Math.random() - .5) * 8} ${-h}`, stroke: i % 3 ? "var(--grass)" : "var(--grass-light)", "stroke-width": 2.2, fill: "none", "stroke-linecap": "round", class: "blade" }, wallGrass);
-  }
-  const wallFoot = $("#wallFooting"), agPipe = $("#agPipe"), wallCap = $("#wallCap"), wallGravel = $("#wallGravel"), wallSoil = $("#wallSoil"), wallTag = $("#wallTag");
-  agPipe.style.strokeDasharray = 1;
-  const wallScene = p => {
-    const f = ease(seg(p, 0, 0.12));
-    wallFoot.style.transform = `scaleX(${f})`; wallFoot.style.opacity = f;
-    agPipe.style.strokeDashoffset = 1 - ease(seg(p, 0.12, 0.22));
-    let topY = 342;
-    courses.forEach((c, i) => {
-      const t = ease(seg(p, 0.22 + i * 0.1, 0.3 + i * 0.1));
-      c.g.style.transform = `translateY(${(1 - t) * -70}px)`; c.g.style.opacity = t;
-      if (t > 0.5) topY = c.y;
+  });
+
+  /* =========================================================
+     BUILD SCENES — shared 3D box helper
+     ========================================================= */
+  const box = (parent, x, y, w, d, h, cls) => {
+    const e = document.createElement("div"); e.className = "bx " + cls;
+    e.style.cssText = `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${w.toFixed(1)}px;height:${d.toFixed(1)}px;--h:${h.toFixed(1)}px`;
+    e.innerHTML = '<b class="t"></b><b class="fr"></b><b class="sd"></b>';
+    parent.appendChild(e); return e;
+  };
+  const tufts = (bx, n, s = 1) => { const t = bx.firstChild; for (let i = 0; i < n; i++) { const f = document.createElement("span"); f.className = "tuft"; f.style.cssText = `left:${(4 + Math.random() * 92).toFixed(1)}%;top:${(8 + Math.random() * 88).toFixed(1)}%;--s:${(s * (0.7 + Math.random() * 0.6)).toFixed(2)}`; f.innerHTML = "<i></i><i></i>"; t.appendChild(f); } };
+  const camera = (el, p, rx0, rx1, rz0, rz1, ph) => {
+    const rx = lerp(rx0, rx1, ease(p)) - tiltY * 8;
+    const rz = lerp(rz0, rz1, ease(p)) + tiltX * 12;
+    el.style.transform = reduce ? `rotateX(${rx1}deg) rotateZ(${rz1}deg)` : `rotateX(${rx.toFixed(2)}deg) rotateZ(${rz.toFixed(2)}deg)`;
+  };
+  // scene pointers: an anchor inside a 3D face + a flat label on the stage that follows it
+  const pointer = (stage, host, txt, x, y) => {
+    const a = document.createElement("i"); a.className = "anc"; a.style.cssText = `left:${x}%;top:${y}%`; host.appendChild(a);
+    const l = document.createElement("span"); l.className = "wl"; l.textContent = txt; stage.appendChild(l);
+    return { a, l };
+  };
+  const placePointers = (stage, list, on) => {
+    const sr = stage.getBoundingClientRect();
+    list.forEach((pt, i) => {
+      const show = on[i]; pt.l.classList.toggle("on", show);
+      if (show) { const r = pt.a.getBoundingClientRect(); pt.l.style.transform = `translate(${(r.left - sr.left).toFixed(1)}px,${(r.top - sr.top).toFixed(1)}px)`; }
     });
-    const fill = Math.max(122, topY);
-    wallGravel.setAttribute("y", fill); wallGravel.setAttribute("height", Math.max(0, 342 - fill));
-    wallGravel.style.opacity = ease(seg(p, 0.16, 0.24));
-    wallSoil.setAttribute("d", `M360 ${fill} L600 ${fill} L600 360 L360 360 Z`);
-    const cap = ease(seg(p, 0.76, 0.84));
-    wallCap.style.transform = `translateY(${(1 - cap) * -50}px)`; wallCap.style.opacity = cap;
-    const gr = ease(seg(p, 0.84, 0.98));
-    wallGrass.style.transform = `scaleY(${gr})`; wallGrass.style.opacity = gr;
-    wallTag.textContent = p < .12 ? "Footing" : p < .22 ? "Ag pipe + gravel" : p < .76 ? `Course ${Math.min(5, Math.floor((p - .22) / .1) + 1)} of 5` : p < .84 ? "Capping" : "Done · backfilled";
+  };
+  const shadowEl = (sc, z) => { const e = document.createElement("div"); e.className = "scene-shadow"; e.style.transform = `translateZ(${z}px)`; sc.appendChild(e); };
+
+  /* =========================================================
+     RETAINING WALL — footing, ag pipe, courses, backfill, cap, lawn
+     ========================================================= */
+  const wallSc = $("#wallScene"), wallTag = $("#wallTag"), wallBar = $("#wallBar");
+  let W = {};
+  const buildWall = () => {
+    wallSc.innerHTML = "";
+    const U = wallSc.clientWidth, Dp = U * 0.8, CH = U * 0.068, BASE = U * 0.04, L = U * 0.84;
+    shadowEl(wallSc, -U * 0.1 - 2);
+    const front = box(wallSc, 0, Dp * 0.62, U, Dp * 0.38, U * 0.1, "m-grass"); front.style.transform = `translateZ(${-U * 0.1}px)`; 
+    const back = box(wallSc, 0, 0, U, Dp * 0.62, U * 0.1, "m-soil"); back.style.transform = `translateZ(${-U * 0.1}px)`;
+    const soil = box(wallSc, U * 0.02, 0, U * 0.96, Dp * 0.24, U * 0.04, "m-soil");
+    const gravel = box(wallSc, U * 0.08, Dp * 0.24, L, Dp * 0.18, 1, "m-gravel");
+    const footing = box(wallSc, U * 0.05, Dp * 0.38, U * 0.9, Dp * 0.26, BASE, "m-concrete");
+    const pipe = box(wallSc, U * 0.1, Dp * 0.3, L - U * 0.04, Dp * 0.06, U * 0.035, "m-pipe");
+    footing.style.transformOrigin = "50% 50%"; pipe.style.transformOrigin = "0 50%";
+    const blocks = [], bl = L / 4;
+    for (let r = 0; r < 5; r++) {
+      const off = r % 2 ? bl / 2 : 0;
+      for (let x = -off, j = 0; x < L - 1; x += bl, j++) {
+        const x0 = Math.max(0, x), x1 = Math.min(L, x + bl);
+        const e = box(wallSc, U * 0.08 + x0 + 1, Dp * 0.42, x1 - x0 - 2, Dp * 0.18, CH - 2, "m-lime v" + ((r * 3 + j) % 3));
+        blocks.push({ e, r, j, z: BASE + r * CH });
+      }
+    }
+    const TOP = BASE + 5 * CH;
+    const cap = box(wallSc, U * 0.065, Dp * 0.405, U * 0.87, Dp * 0.21, U * 0.03, "m-cap");
+    const lawn = box(wallSc, U * 0.02, 0, U * 0.96, Dp * 0.42, U * 0.018, "m-grass");
+    // ground-level tags: dot sits on each lawn, label floats above it
+    const stage = wallSc.parentNode; stage.querySelectorAll(".wl").forEach(e => e.remove());
+    const tags = [pointer(stage, lawn.firstChild, "Raised level", 22, 45), pointer(stage, front.firstChild, "Original ground", 72, 55)];
+    W = { U, CH, BASE, TOP, soil, gravel, footing, pipe, blocks, cap, lawn, tags, stage };
+  };
+  const wallScene = p => {
+    if (!W.U) return;
+    const { U, CH, BASE, TOP, soil, gravel, footing, pipe, blocks, cap, lawn, tags, stage } = W;
+    camera(wallSc, p, 63, 55, -50, -30, 0);
+    const f = ease(seg(p, 0.02, 0.1));
+    footing.style.transform = `scaleX(${Math.max(0.001, f).toFixed(3)})`; footing.style.visibility = f > 0.001 ? "visible" : "hidden";
+    const q = ease(seg(p, 0.1, 0.18));
+    pipe.style.transform = `translateZ(${BASE}px) scaleX(${Math.max(0.001, q).toFixed(3)})`; pipe.style.visibility = q > 0.001 ? "visible" : "hidden";
+    let placed = 0;
+    blocks.forEach(b => {
+      const a0 = 0.2 + b.r * 0.1 + b.j * 0.012, raw = seg(p, a0, a0 + 0.06), t = ease(raw);
+      b.e.style.visibility = raw > 0.001 ? "visible" : "hidden";
+      b.e.style.transform = `translate3d(0,${((1 - t) * -U * 0.08).toFixed(1)}px,${(b.z + (1 - t) * U * 0.45).toFixed(1)}px) rotateZ(${((1 - t) * (b.j % 2 ? 9 : -9)).toFixed(2)}deg)`;
+    });
+    for (let r = 0; r < 5; r++) placed += ease(seg(p, 0.27 + r * 0.1, 0.31 + r * 0.1));
+    const fillZ = BASE + CH * placed - (placed > 4.99 ? U * 0.012 : 0);
+    const gh = Math.max(U * 0.045 * ease(seg(p, 0.15, 0.2)), fillZ - BASE);
+    gravel.style.setProperty("--h", gh.toFixed(1) + "px"); gravel.style.transform = `translateZ(${BASE}px)`; gravel.style.visibility = gh > 0.5 ? "visible" : "hidden";
+    soil.style.setProperty("--h", Math.max(U * 0.04, fillZ).toFixed(1) + "px");
+    const c = ease(seg(p, 0.74, 0.82));
+    cap.style.visibility = c > 0.001 ? "visible" : "hidden";
+    cap.style.transform = `translateZ(${(TOP + (1 - c) * U * 0.3).toFixed(1)}px)`;
+    const g = ease(seg(p, 0.84, 0.97));
+    lawn.style.visibility = g > 0.001 ? "visible" : "hidden";
+    lawn.style.transform = `translateZ(${(fillZ - U * 0.018 * (1 - g)).toFixed(1)}px)`;
+    lawn.style.setProperty("--dry", (1 - g).toFixed(3));
+    placePointers(stage, tags, [g > 0.6, g > 0.6]);
+    wallTag.textContent = p < 0.1 ? "Footing" : p < 0.2 ? "Ag pipe + gravel" : p < 0.72 ? `Course ${Math.min(5, Math.floor((p - 0.2) / 0.1) + 1)} of 5 · backfilled` : p < 0.84 ? "Capping" : "Done · lawn on top";
+    wallBar.style.transform = `scaleX(${p.toFixed(4)})`;
   };
 
   /* =========================================================
-     TURF — soil prep, roll out, grass grows
+     TURF — improver, laser level, rolls unroll, watered, grows in
      ========================================================= */
-  const blades = $("#blades"), seams = $("#turfSeams"), bladeEls = [];
-  for (let i = 0; i < 190; i++) {
-    const x = 42 + i * 2.74 + Math.random() * 2, h = 10 + Math.random() * 20, lean = (Math.random() - .5) * 10;
-    bladeEls.push(mk("path", { d: `M${x} 250 q${lean / 2} ${-h / 2} ${lean} ${-h}`, stroke: ["var(--grass)", "var(--grass-light)", "var(--grass-dark)"][i % 3], "stroke-width": 2, fill: "none", "stroke-linecap": "round" }, blades));
-  }
-  [170, 300, 430].forEach((x, i) => mk("line", { x1: x + (i % 2 ? 30 : 0), y1: 250, x2: x + (i % 2 ? 30 : 0), y2: 282 }, seams));
-  const turfClip = $("#turfClipRect"), roll = $("#turfRoll"), improver = $("#improver"), turfTag = $("#turfTag");
-  const turfScene = p => {
-    improver.style.opacity = ease(seg(p, 0, 0.18));
-    const u = ease(seg(p, 0.2, 0.68)), x = 40 + 520 * u;
-    turfClip.setAttribute("width", 520 * u); turfClip.setAttribute("y", 150); turfClip.setAttribute("height", 140);
-    const r = lerp(1, 0.35, u);
-    roll.setAttribute("transform", `translate(${x},${265 - 34 * r + 17}) rotate(${u * 900}) scale(${r})`);
-    roll.style.opacity = 1 - seg(p, 0.66, 0.72);
-    const g = ease(seg(p, 0.7, 0.98));
-    blades.style.transform = `scaleY(${0.15 + g * 0.85})`;
-    turfTag.textContent = p < .2 ? "Soil prep + improver" : p < .7 ? "Rolling out · joints staggered" : p < .98 ? "Watering in" : "Established";
+  const turfSc = $("#turfScene"), turfTag = $("#turfTag"), turfBar = $("#turfBar"), drops = $("#turfDrops");
+  for (let i = 0; i < 46; i++) { const d = document.createElement("i"); d.style.cssText = `left:${(Math.random() * 100).toFixed(1)}%;--d:${(0.7 + Math.random() * 0.6).toFixed(2)}s;--dl:${(-Math.random()).toFixed(2)}s;--fall:${(180 + Math.random() * 140).toFixed(0)}px`; drops.appendChild(d); }
+  let T = {};
+  const buildTurf = () => {
+    turfSc.innerHTML = "";
+    const U = turfSc.clientWidth, Dp = U * 0.8;
+    shadowEl(turfSc, -U * 0.12 - 2);
+    const ground = box(turfSc, 0, 0, U, Dp, U * 0.12, "m-ground"); ground.style.transform = `translateZ(${-U * 0.12}px)`;
+    const imp = box(turfSc, U * 0.04, Dp * 0.05, U * 0.92, Dp * 0.9, U * 0.016, "m-improver"); imp.style.transformOrigin = "0 50%";
+    const laser = document.createElement("div"); laser.className = "laser"; laser.style.cssText = `left:${U * 0.04}px;width:${U * 0.92}px`; turfSc.appendChild(laser);
+    const strips = [], JX = [0.38, 0.68, 0.5];
+    for (let k = 0; k < 3; k++) {
+      const y0 = Dp * (0.05 + k * 0.3), d = Dp * 0.3 - 3;
+      const e = box(turfSc, U * 0.04, y0, U * 0.92, d, U * 0.022, "m-turf");
+      e.style.setProperty("--jx", (U * 0.92 * JX[k]).toFixed(0) + "px"); e.style.setProperty("--stripe", (U * 0.92 / 8).toFixed(0) + "px");
+      const roll = document.createElement("div"); roll.className = "roll"; roll.style.cssText = `top:${y0.toFixed(1)}px;height:${d.toFixed(1)}px`;
+      roll.innerHTML = Array.from({ length: 10 }, (_, i) => `<i style="--a:${(i * 36).toFixed(2)}deg"></i>`).join("") + "<b></b>";
+      turfSc.appendChild(roll);
+      strips.push({ e, roll });
+    }
+    const stage = turfSc.parentNode; stage.querySelectorAll(".wl").forEach(e => e.remove());
+    const tags = [
+      pointer(stage, imp.children[1], "Soil improver", 82, 50),
+      pointer(stage, ground.children[1], "Levelled sand base", 30, 70),
+      pointer(stage, strips[1].e.firstChild, "Staggered joints", JX[1] * 100, 50),
+      ...strips.map(s => { const a = document.createElement("u"); a.className = "anc"; a.style.cssText = "left:0;top:100%"; s.roll.appendChild(a); return a; })
+    ];
+    const rollTag = document.createElement("span"); rollTag.className = "wl"; rollTag.textContent = "Fresh-cut roll"; stage.appendChild(rollTag);
+    T = { U, Dp, imp, laser, strips, stage, tags: tags.slice(0, 3), rollAnc: tags.slice(3), rollTag };
   };
+  const turfScene = p => {
+    if (!T.U) return;
+    const { U, Dp, imp, laser, strips, stage, tags, rollAnc, rollTag } = T;
+    camera(turfSc, p, 62, 56, -24, -42, 1.7);
+    const im = ease(seg(p, 0.02, 0.15));
+    imp.style.visibility = im > 0.001 ? "visible" : "hidden";
+    imp.style.transform = `scaleX(${Math.max(0.001, im).toFixed(3)})`;
+    const lz = seg(p, 0.16, 0.24);
+    laser.style.visibility = lz > 0 && lz < 1 ? "visible" : "hidden";
+    laser.style.transform = `translate3d(0,${(Dp * (0.05 + 0.9 * lz)).toFixed(1)}px,${(U * 0.016 + 2).toFixed(1)}px)`;
+    const full = U * 0.92, Z0 = U * 0.016;
+    strips.forEach((s, k) => {
+      const u = ease(seg(p, 0.25 + k * 0.15, 0.47 + k * 0.15)), w = full * u;
+      s.e.style.width = Math.max(0.5, w).toFixed(1) + "px";
+      s.e.style.visibility = u > 0.002 ? "visible" : "hidden";
+      s.e.style.transform = `translateZ(${Z0}px)`;
+      const r = lerp(U * 0.085, U * 0.032, u), spin = (w / ((U * 0.085 + U * 0.032) / 2)) * 57.3;
+      s.roll.style.setProperty("--r", r.toFixed(1) + "px");
+      s.roll.style.visibility = u < 0.995 ? "visible" : "hidden";
+      s.roll.style.transform = `translate3d(${(U * 0.04 + w).toFixed(1)}px,0,${(Z0 + r).toFixed(1)}px) rotateY(${spin.toFixed(1)}deg)`;
+    });
+    const k = Math.min(2, Math.max(0, Math.floor((p - 0.25) / 0.15))), rolling = p > 0.27 && p < 0.74;
+    placePointers(stage, [...tags, { a: rollAnc[k], l: rollTag }], [p > 0.12 && p < 0.3, p > 0.18, p > 0.5, rolling]);
+    const wet = seg(p, 0.76, 0.9);
+    drops.style.opacity = (Math.sin(wet * Math.PI) * 0.9).toFixed(2);
+    turfSc.style.setProperty("--g", (0.3 + 0.7 * ease(seg(p, 0.84, 0.98))).toFixed(3));
+    turfSc.style.setProperty("--seam", (1 - seg(p, 0.84, 0.96)).toFixed(3));
+    turfSc.style.setProperty("--dry", (1 - seg(p, 0.76, 0.95)).toFixed(3));
+    turfTag.textContent = p < 0.16 ? "Soil prep + improver" : p < 0.25 ? "Laser levelled" : p < 0.76 ? "Rolling out · joints staggered" : p < 0.9 ? "Watering in" : "Established";
+    turfBar.style.transform = `scaleX(${p.toFixed(4)})`;
+  };
+  const buildScenes = () => { buildWall(); buildTurf(); };
+  buildScenes();
 
   /* =========================================================
      BRAND MARK — logo strokes draw, each reveals a service pointer
      ========================================================= */
-  const markSec = $("#mark"), markSegs = $$("#mark .mk"), pins = $$("#mark .pin"), legend = $$("#mark .legend button");
+  const markSec = $("#mark"), markG = $("#mark .mk-g"), markJ = $("#mark .mk-j"), eraseG = $("#mark .mke-g"), eraseJ = $("#mark .mke-j"), pins = $$("#mark .pin"), legend = $$("#mark .legend button");
   const SEG = [[0.04, 0.2], [0.24, 0.36], [0.4, 0.56], [0.6, 0.76]];
   const markScene = p => {
-    markSegs.forEach((s, i) => { const t = ease(seg(p, ...SEG[i])); s.style.strokeDashoffset = 1 - t; s.style.opacity = t > 0.005 ? 1 : 0; });
+    const t = SEG.map(w => ease(seg(p, ...w)));
+    const green = 0.524 * t[0] + 0.219 * t[1] + 0.257 * t[2];   // roof, wall, floor as fractions of the green path
+    markG.style.strokeDashoffset = 1 - green; markG.style.opacity = green > 0.002 ? 1 : 0;
+    eraseG.style.strokeDashoffset = 1 - green; eraseJ.style.strokeDashoffset = 1 - t[3];
+    markJ.style.strokeDashoffset = 1 - t[3]; markJ.style.opacity = t[3] > 0.005 ? 1 : 0;
     pins.forEach((pin, i) => pin.classList.toggle("show", p >= SEG[i][1] - 0.01));
     legend.forEach((l, i) => l.classList.toggle("show", p >= SEG[i][1] - 0.01));
     markSec.classList.toggle("filled", p > 0.82);
   };
 
   /* ---------- process line ---------- */
-  const steps = $("#steps"), stepsLine = $("#stepsLine");
+  const steps = $("#steps"), stepsLine = $("#stepsLine"), stepEls = $$("#steps .step"), procSec = $("#process");
 
   /* ---------- parallax ---------- */
-  const heroImg = $(".hero-media img"), gal = $$(".g[data-speed]");
+  const heroImg = $(".hero-media img"), gal = $$(".g img");
 
   /* ---------- frame loop: all scroll-linked work in one rAF ---------- */
   const secProgress = el => {           // pinned sections: 0 at top hits top, 1 at bottom hits bottom
@@ -296,25 +440,39 @@
   const viewProgress = (el, a = 0.95, b = 0.25) => {   // element top travelling from a*vh to b*vh
     const r = el.getBoundingClientRect(); return clamp((a * vh - r.top) / ((a - b) * vh + r.height * 0.3));
   };
-  const fab = $(".fab"), quote = $("#quote");
+  const onScreen = el => { const r = el.getBoundingClientRect(); return r.bottom > -50 && r.top < vh + 50; };
+  const memo = new Map();
+  const drive = (fn, el, p) => {          // run a scene only if on screen and its progress or the pointer tilt moved
+    if (!onScreen(el)) return;
+    const k = p.toFixed(4) + "|" + tiltX.toFixed(3) + "|" + tiltY.toFixed(3) + "|" + vw;
+    if (memo.get(fn) === k) return; memo.set(fn, k); fn(p);
+  };
+  const fab = $(".fab"), quote = $("#quote"), wallPin = $("#wallBuild"), turfPin = $("#turfBuild");
   const frame = () => {
     const y = scrollY;
     if (Math.abs(y - lastY) > 4) { nav.classList.toggle("hide", y > lastY && y > 400 && !nav.classList.contains("open")); lastY = y; }
     nav.classList.toggle("solid", y > 40);
     if (!reduce) {
       heroImg.style.transform = `translate3d(0,${y * 0.25}px,0) scale(${1 + y * 0.0002})`;
-      gal.forEach(g => { const r = g.getBoundingClientRect(); if (r.bottom > 0 && r.top < vh) g.style.transform = `translate3d(0,${((r.top + r.height / 2 - vh / 2) * +g.dataset.speed).toFixed(1)}px,0)`; });
+      gal.forEach(im => { const r = im.parentElement.getBoundingClientRect(); if (r.bottom > 0 && r.top < vh) im.style.setProperty("--py", (clamp((r.top + r.height / 2 - vh / 2) / vh, -1, 1) * -22).toFixed(1) + "px"); });
     }
     if (manWords.length) {
       const p = viewProgress(man, 0.85, 0.15) * 1.15;
       manWords.forEach((w, i) => w.classList.toggle("lit", i / manWords.length < p));
     }
-    markScene(reduce ? 1 : secProgress(markSec));
-    layersScene(reduce ? 1 : secProgress(layersSec));
-    servicesScene(secProgress(svcSec));
-    wallScene(reduce ? 1 : viewProgress($("#wallBuild"), 0.9, 0.2));
-    turfScene(reduce ? 1 : viewProgress($("#turfBuild"), 0.9, 0.2));
-    stepsLine.style.setProperty("--draw", 1 - viewProgress(steps, 0.85, 0.45));
+    // only animate scenes that are actually on screen
+    tiltX += (tiltTX - tiltX) * 0.08; tiltY += (tiltTY - tiltY) * 0.08;
+    if (Math.abs(tiltTX - tiltX) < 0.001) tiltX = tiltTX; if (Math.abs(tiltTY - tiltY) < 0.001) tiltY = tiltTY;
+    drive(markScene, markSec, reduce ? 1 : secProgress(markSec));
+    drive(layersScene, layersSec, reduce ? 1 : secProgress(layersSec));
+    drive(servicesScene, svcSec, secProgress(svcSec));
+    drive(wallScene, wallPin, reduce ? 1 : secProgress(wallPin));
+    drive(turfScene, turfPin, reduce ? 1 : secProgress(turfPin));
+    if (vw > 960) {                    // pinned: the line runs left to right and lights each step as it arrives
+      const d = reduce ? 1 : ease(seg(secProgress(procSec), 0.06, 0.8)), sw = steps.clientWidth;
+      stepsLine.style.transform = `scaleX(${d.toFixed(4)})`;
+      stepEls.forEach(s => s.classList.toggle("on", d >= s.offsetLeft / sw - 0.002));
+    }
     const qr = quote.getBoundingClientRect();
     fab.classList.toggle("show", y > vh * 0.9 && !(qr.top < vh && qr.bottom > 0));
     requestAnimationFrame(frame);
@@ -323,7 +481,7 @@
 
   addEventListener("resize", () => {
     const w = innerWidth; vh = innerHeight;
-    if (w !== vw) { vw = w; buildBricks(); buildIso(); }
+    if (w !== vw) { vw = w; buildBricks(); buildIso(); buildScenes(); sizeServices(); }
   });
 
   /* ---------- custom cursor + magnetic buttons ---------- */
@@ -518,4 +676,95 @@
     goTo(quote); started = true; run(b.dataset.ask);
   }));
   $$(".svc[data-svc]").forEach(c => c.addEventListener("click", e => { if (!e.target.closest("button")) $("[data-ask]", c).click(); }));
+
+  /* ---------- gallery lightbox: the photo grows out of its tile and shrinks back into it ---------- */
+  const lbox = $("#lightbox"), lbImg = $(".lb-fig img", lbox), lbCap = $(".lb-cap", lbox), lbCount = $(".lb-count", lbox), figs = $$("#gallery .g");
+  let lbAt = 0, lbFrom = null, lbBusy = false;
+  const big = src => src.replace(/w=\d+/, "w=2000").replace(/q=\d+/, "q=80");
+  const FLY = "transform .62s cubic-bezier(.2,.8,.2,1), clip-path .62s cubic-bezier(.2,.8,.2,1), border-radius .62s";
+  // transform + crop that makes the full photo sit exactly where (and how) the cover-cropped tile shows it
+  const tileGeom = f => {
+    const R = f.getBoundingClientRect(), F = lbImg.getBoundingClientRect();
+    const s = Math.max(R.width / F.width, R.height / F.height);
+    const ix = Math.max(0, (F.width - R.width / s) / 2), iy = Math.max(0, (F.height - R.height / s) / 2);
+    return {
+      t: `translate(${(R.left + R.width / 2 - (F.left + F.width / 2)).toFixed(1)}px,${(R.top + R.height / 2 - (F.top + F.height / 2)).toFixed(1)}px) scale(${s.toFixed(4)})`,
+      c: `inset(${iy.toFixed(1)}px ${ix.toFixed(1)}px round ${(2 / s).toFixed(1)}px)`
+    };
+  };
+  const setInfo = () => { const f = figs[lbAt]; lbCap.textContent = $("figcaption", f).textContent; lbCount.textContent = `${lbAt + 1} / ${figs.length}`; };
+  const loadBig = f => { const im = $("img", f), hi = new Image(); hi.onload = () => { if (figs[lbAt] === f) lbImg.src = hi.src; }; hi.src = big(im.src); };
+  const setSrc = f => { const im = $("img", f); lbImg.src = im.src; lbImg.alt = im.alt; return lbImg.decode().catch(() => {}); };
+  const showTile = (f, on) => { $("img", f).style.visibility = on ? "" : "hidden"; };
+
+  const lbOpen = async i => {
+    if (lbBusy) return; lbBusy = true;
+    lbAt = i; lbFrom = document.activeElement;
+    const f = figs[i];
+    lbImg.style.transition = "none"; lbImg.style.opacity = "0";
+    lbox.hidden = false; setInfo();
+    await setSrc(f);
+    if (reduce) { lbImg.style.opacity = ""; lbImg.style.transform = lbImg.style.clipPath = ""; }
+    else {
+      const g = tileGeom(f);
+      lbImg.style.transform = g.t; lbImg.style.clipPath = g.c; lbImg.style.opacity = "";
+      showTile(f, false);
+      lbImg.getBoundingClientRect();                    // commit the start pose
+      lbImg.style.transition = FLY; lbImg.style.transform = "none"; lbImg.style.clipPath = "inset(0px round 4px)";
+    }
+    lbox.classList.add("open");
+    lenis && lenis.stop(); document.documentElement.style.overflow = "hidden";
+    $(".lb-close", lbox).focus({ preventScroll: true });
+    loadBig(f);
+    setTimeout(() => { lbBusy = false; }, reduce ? 0 : 620);
+  };
+
+  const lbClose = () => {
+    if (lbBusy || lbox.hidden) return; lbBusy = true;
+    const f = figs[lbAt], r = f.getBoundingClientRect(), visible = r.bottom > 0 && r.top < innerHeight;
+    lbox.classList.remove("open");
+    if (!reduce && visible) {
+      const g = tileGeom(f);
+      lbImg.style.transition = FLY; lbImg.style.transform = g.t; lbImg.style.clipPath = g.c;
+    } else { lbImg.style.transition = "opacity .3s"; lbImg.style.opacity = "0"; }
+    const done = () => {
+      figs.forEach(x => showTile(x, true));
+      lbox.hidden = true; lbImg.style.cssText = ""; lbBusy = false;
+      lenis && lenis.start(); document.documentElement.style.overflow = "";
+      lbFrom && lbFrom.focus({ preventScroll: true });
+    };
+    setTimeout(done, reduce ? 0 : visible ? 620 : 300);
+  };
+
+  // next / previous: quick slide-and-fade between photos
+  const lbStep = async dir => {
+    if (lbBusy || lbox.hidden) return; lbBusy = true;
+    showTile(figs[lbAt], true);
+    lbImg.style.transition = "opacity .18s, transform .18s"; lbImg.style.clipPath = "inset(0px round 4px)";
+    lbImg.style.opacity = "0"; lbImg.style.transform = `translateX(${-dir * 40}px)`;
+    await new Promise(r => setTimeout(r, reduce ? 0 : 180));
+    lbAt = (lbAt + dir + figs.length) % figs.length;
+    const f = figs[lbAt]; setInfo(); showTile(f, false);
+    await setSrc(f);
+    lbImg.style.transition = "none"; lbImg.style.transform = `translateX(${dir * 40}px)`; lbImg.getBoundingClientRect();
+    lbImg.style.transition = "opacity .28s, transform .38s cubic-bezier(.2,.8,.2,1)"; lbImg.style.opacity = ""; lbImg.style.transform = "none";
+    loadBig(f);
+    setTimeout(() => { lbBusy = false; }, reduce ? 0 : 300);
+  };
+
+  figs.forEach((f, i) => {
+    f.addEventListener("click", () => lbOpen(i));
+    f.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); lbOpen(i); } });
+  });
+  $(".lb-close", lbox).addEventListener("click", lbClose);
+  $(".lb-prev", lbox).addEventListener("click", () => lbStep(-1));
+  $(".lb-next", lbox).addEventListener("click", () => lbStep(1));
+  lbox.addEventListener("click", e => { if (e.target === lbox || e.target === $(".lb-fig", lbox)) lbClose(); });
+  addEventListener("keydown", e => {
+    if (lbox.hidden) return;
+    if (e.key === "Escape") lbClose(); else if (e.key === "ArrowRight") lbStep(1); else if (e.key === "ArrowLeft") lbStep(-1);
+  });
+  let sx = null;
+  lbox.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+  lbox.addEventListener("touchend", e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) lbStep(dx < 0 ? 1 : -1); sx = null; });
 })();
