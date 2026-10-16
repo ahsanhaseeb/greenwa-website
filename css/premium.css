@@ -232,12 +232,65 @@ html.lenis, html.lenis body { height: auto; }
 .m-concrete > b { background-image: var(--tx-concrete); background-color: var(--concrete); }
 .m-gravel > b { background-image: var(--tx-gravel); background-color: var(--base); }
 .m-pipe > b { background: repeating-linear-gradient(90deg, #262925 0 7px, #121411 7px 9px); border-radius: 40%; }
-.m-lime > b { background-image: var(--tx-lime); background-color: #E6D9B6; box-shadow: inset 0 0 0 1px rgb(120 100 60 / .22); border-radius: 1.5px; }
-.m-lime.v1 > .t { box-shadow: inset 0 0 0 9999px rgb(0 0 0 / 0.05); } .m-lime.v2 > .t { box-shadow: inset 0 0 0 9999px rgb(255 255 255 / .06); }
+.m-lime > b { background-image: var(--tx-lime); background-color: #E6D9B6; border-radius: 1.5px; }
+/* limestone blocks: bevelled arrises (light top/left edge, dark bottom/right) on every face, plus the base face shading */
+.m-lime > .t { box-shadow: inset 1.5px 1.5px 0 rgb(255 255 255 / .45), inset -1.5px -1.5px 0 rgb(110 88 52 / .35), inset 0 0 0 1px rgb(120 100 60 / .25); }
+.m-lime > .fr { box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .1), inset 0 2px 0 rgb(255 255 255 / .35), inset 0 -2px 2px rgb(80 62 34 / .35), inset 1.5px 0 0 rgb(255 255 255 / .2), inset -1.5px 0 0 rgb(80 62 34 / .3); }
+.m-lime > .sd { box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .26), inset 0 2px 0 rgb(255 255 255 / .2), inset 0 -2px 2px rgb(60 46 24 / .35); }
+.m-lime > .fr::after, .m-lime > .sd::after { background: linear-gradient(to bottom, transparent 55%, rgb(70 55 30 / .16)); }
+.m-lime.v1 > b { background-color: #DFD0A8; } .m-lime.v2 > b { background-color: #ECE1C3; }   /* natural colour variation between blocks */
 .m-cap > b { background-image: var(--tx-lime); background-color: #CDBE94; background-blend-mode: multiply; border-radius: 2px; }
+.m-cap > .t { box-shadow: inset 0 3px 3px rgb(255 255 255 / .28), inset 0 -2px 0 rgb(90 72 40 / .3), inset 0 0 0 1px rgb(110 90 50 / .3); }
+.m-cap > .fr { box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .12), inset 0 2px 0 rgb(255 255 255 / .4); border-radius: 0 0 4px 4px; }   /* rounded bullnose front edge */
+/* ground cut-away: Perth profile = turf, dark topsoil, then yellow sand */
+.m-strata > .fr, .m-strata > .sd { background:
+  radial-gradient(circle, rgb(150 115 60 / .35) .7px, transparent 1.1px) 0 0/6px 6px,
+  radial-gradient(circle, rgb(255 255 255 / .3) .6px, transparent 1px) 3px 2px/9px 9px,
+  linear-gradient(to bottom, #3B2A1B 0 20%, #5A4029 24%, #9C7A4E 32%, #D3B57C 38%, #DCC08A 70%, #CFAF73 100%); }
+.m-grass.m-strata > .fr, .m-grass.m-strata > .sd { background:
+  radial-gradient(circle, rgb(150 115 60 / .35) .7px, transparent 1.1px) 0 0/6px 6px,
+  radial-gradient(circle, rgb(255 255 255 / .3) .6px, transparent 1px) 3px 2px/9px 9px,
+  linear-gradient(to bottom, #4DA537 0 7%, #2F5E22 7% 9%, #3B2A1B 9% 26%, #5A4029 30%, #9C7A4E 36%, #D3B57C 42%, #DCC08A 72%, #CFAF73 100%); }
+/* backfill: clean sand compacted one course (lift) at a time, the lift lines show on the cut face */
+.m-backfill > b { background-image: var(--tx-sand); background-color: #DCC596; }
+.m-backfill > .fr, .m-backfill > .sd { background: repeating-linear-gradient(to top, rgb(120 90 45 / .32) 0 1.5px, transparent 1.5px var(--lift, 20px)), var(--tx-sand) 0 0/48px 48px, #D8BF8C; }
+/* the wall throws a soft shadow onto the lower lawn */
+.wall-shade > .t::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, rgb(10 30 5 / .32), rgb(10 30 5 / .1) 22%, transparent 42%); }
+.m-sand > b { background-image: var(--tx-sand); background-color: #E4D2A2; }
+.m-dust > b { background-image: var(--tx-dust); background-color: #BCB7AC; }
+.m-dust.screeded > .t { box-shadow: inset 0 0 0 9999px rgb(255 255 255 / .1), inset 0 0 0 1px rgb(255 255 255 / .2); }
+.m-topsoil > b { background-image: var(--tx-topsoil); background-color: #4B3524; }
+/* artificial grass: tight even pile on a black backing; --ww = whitewash sand infill, --fl = power-broomed pile */
+.m-syn > .t { background: var(--tx-syn) 0 0/48px 48px, #4FA83A; }
+.m-syn > .fr, .m-syn > .sd { background: linear-gradient(to bottom, #55AE3D 0 70%, #1D1F1C 70%); }
+.m-syn > .t::after { content: ""; position: absolute; inset: 0; opacity: var(--ww, 0); background: radial-gradient(circle, #F6F0E2 0 .9px, transparent 1.3px) 0 0/5px 5px, rgb(240 232 210 / .4); }
+.m-syn > .t::before { content: ""; position: absolute; inset: 0; opacity: calc(var(--fl, 0) * .9); background: repeating-linear-gradient(115deg, rgb(255 255 255 / .1) 0 3px, transparent 3px 9px); }
+/* edging options */
+.m-steel > b { background: linear-gradient(#70757A, #41464A); }
+.m-timber > b { background: repeating-linear-gradient(90deg, #8E5E36 0 7px, #7A4E2C 7px 10px); }
+.m-alu > b { background: linear-gradient(#E3E7EA, #A6ADB3); }
+.m-peg > b { background: #2C2C2A; }
+.m-broom > b { background: #D8572F; }
+.m-broom > .t { background: repeating-linear-gradient(90deg, #2A2A28 0 2px, #4A4A46 2px 4px); }
 .m-improver > b { background-image: var(--tx-improver); background-color: #3F2C1C; }
-.m-grass > .t, .m-turf > .t { background: repeating-linear-gradient(90deg, rgb(255 255 255 / .06) 0 var(--stripe, 28px), transparent var(--stripe, 28px) calc(var(--stripe, 28px) * 2)), var(--tx-grass) 0 0/64px 64px, #4AA634; }
-.m-grass > .fr, .m-grass > .sd, .m-turf > .fr, .m-turf > .sd { background: linear-gradient(to bottom, #4DA537 0 38%, #3A2A1B 38%); }
+/* natural grass: blade texture + large soft patches + faint mowing stripes */
+.m-grass > .t, .m-turf > .t { background:
+  repeating-linear-gradient(90deg, rgb(255 255 255 / .055) 0 var(--stripe, 28px), rgb(0 0 0 / .035) var(--stripe, 28px) calc(var(--stripe, 28px) * 2)),
+  var(--tx-gpatch) 0 0/230px 230px,
+  var(--tx-gpatch) 70px 40px/140px 140px,
+  var(--tx-grass) 0 0/56px 56px, #3E962C; }
+/* cut edge: blades on top, dense thatch, then the root zone fading into soil */
+.m-grass > .fr, .m-grass > .sd, .m-turf > .fr, .m-turf > .sd { background:
+  radial-gradient(circle, rgb(150 120 70 / .35) .7px, transparent 1.1px) 0 0/5px 5px,
+  linear-gradient(to bottom, #5DB840 0, #3E8F2C 14%, #2C5E1F 26%, #3A3A1C 34%, #3A2A1B 40%, #33251A 100%); }
+/* a fringe of blades poking up along every front cut edge, so lawn edges are never a ruler-straight line */
+.m-grass > .fr::before, .m-turf > .fr::before, .m-syn > .fr::before { content: ""; position: absolute; left: 0; right: 0; top: -5px; height: 7px; pointer-events: none;
+  background: linear-gradient(to bottom, #8FD460, #4FA83A 55%, #2F7521);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%279%27 height=%277%27%3E%3Cpath d=%27M0 7 .9 1.6 1.8 7 2.6 0 3.8 7 4.7 2.4 5.6 7 6.6 .6 7.6 7 8.3 3 9 7z%27/%3E%3C/svg%3E") 0 100%/9px 7px repeat-x;
+          mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%279%27 height=%277%27%3E%3Cpath d=%27M0 7 .9 1.6 1.8 7 2.6 0 3.8 7 4.7 2.4 5.6 7 6.6 .6 7.6 7 8.3 3 9 7z%27/%3E%3C/svg%3E") 0 100%/9px 7px repeat-x; }
+/* synthetic pile is shorter, even and uniform */
+.m-syn > .fr::before { top: -3px; height: 4px; background: linear-gradient(to bottom, #6DBF47, #3E9A2D);
+  -webkit-mask-size: 4px 4px; mask-size: 4px 4px; }
 .m-turf > .t::before { content: ""; position: absolute; inset: 0; opacity: var(--seam, 1); background: linear-gradient(90deg, transparent calc(var(--jx) - 1px), rgb(20 50 10 / .7) calc(var(--jx) - 1px) calc(var(--jx) + 1px), transparent calc(var(--jx) + 1px)); }
 .m-grass > .t::after { content: ""; position: absolute; inset: 0; opacity: var(--dry, 0); background: #6B4A2E; }
 .m-turf > .t::after { content: ""; position: absolute; inset: 0; opacity: var(--dry, 1); background: linear-gradient(135deg, rgb(206 196 110 / .45), rgb(170 170 80 / .3)); }
@@ -247,16 +300,29 @@ html.lenis, html.lenis body { height: auto; }
 .tuft i { position: absolute; left: calc(var(--u) * -.025); bottom: 0; width: calc(var(--u) * .05); height: calc(var(--u) * .05 * var(--s, 1)); transform-origin: bottom; transform: rotateX(-90deg) scaleY(var(--g, 1)); background: linear-gradient(to top, #2B6F20, #5DB83F 60%, #9BE070); clip-path: polygon(0 100%, 8% 35%, 15% 100%, 24% 100%, 35% 0, 45% 100%, 52% 100%, 63% 22%, 71% 100%, 78% 100%, 90% 42%, 100% 100%); }
 .tuft { display: none; }
 
-/* turf roll: a 14-sided prism with a spiral end cap */
+/* turf roll: an 18-sided cylinder (facets overlap a hair so no gaps), lit per facet from JS, with a spiral end */
 .roll { position: absolute; width: 0; transform-style: preserve-3d; transform-origin: 0 0; }
-.roll i { position: absolute; top: 0; height: 100%; left: calc(var(--r) * -.115); width: calc(var(--r) * .23); background: linear-gradient(90deg, #4A3420, #6A4A2E); transform: rotateY(var(--a)) translateZ(var(--r)); backface-visibility: hidden; }
-.roll b { position: absolute; left: calc(var(--r) * -1); top: calc(100% - var(--r)); width: calc(var(--r) * 2); height: calc(var(--r) * 2); border-radius: 50%; transform: rotateX(-90deg); background: repeating-radial-gradient(circle, #3E9A2D 0 3px, #5A3F2A 3px 5px); box-shadow: inset 0 0 0 2px #3A2A1B; }
-.laser { position: absolute; height: 3px; border-radius: 3px; background: #7CFF6B; box-shadow: 0 0 10px 3px rgb(0 209 15 / .55); visibility: hidden; }
+.roll i { position: absolute; top: 0; height: 100%; left: calc(var(--r) * -.185); width: calc(var(--r) * .37); transform: rotateY(var(--a)) translateZ(calc(var(--r) * .985)); backface-visibility: hidden;
+  background: var(--tx-topsoil) 0 0/64px 64px, #5A3F2A;
+  box-shadow: inset 0 0 0 999px rgb(0 0 0 / var(--sh, .15)), inset 0 0 0 999px rgb(255 240 210 / calc(var(--hl, 0) * .5)); }
+.roll i::after { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: #4FA83A; opacity: .9; }   /* grass blades peeking past the near edge */
+.roll.syn i { background: repeating-linear-gradient(90deg, rgb(255 255 255 / .06) 0 1px, transparent 1px 4px), repeating-linear-gradient(0deg, rgb(255 255 255 / .05) 0 1px, transparent 1px 5px), #262824; }
+.roll.syn i::after { background: #4FAE38; }
+.roll b { position: absolute; left: calc(var(--r) * -1); top: calc(100% - var(--r)); width: calc(var(--r) * 2); height: calc(var(--r) * 2); border-radius: 50%; transform: rotateX(-90deg);
+  background:
+    radial-gradient(circle, #1A120B 0 9%, #3A2A1B 10% 12%, transparent 13%),
+    radial-gradient(circle, transparent 55%, rgb(0 0 0 / .28) 100%),
+    radial-gradient(circle at 35% 30%, rgb(255 255 255 / .16), transparent 55%),
+    repeating-radial-gradient(circle, #6A4A2E 0, #4A3420 calc(var(--r) * .1), #2F6E22 calc(var(--r) * .1), #5DB244 calc(var(--r) * .14), #3C8E2B calc(var(--r) * .16));
+  box-shadow: inset 0 0 0 2px #3A2A1B, 0 0 0 1px rgb(0 0 0 / .25); }
+.roll.syn b {
+  background:
+    radial-gradient(circle, #15140F 0 10%, #C9A877 11% 17%, #9E804F 18%, transparent 19%),   /* cardboard core */
+    radial-gradient(circle, transparent 55%, rgb(0 0 0 / .3) 100%),
+    radial-gradient(circle at 35% 30%, rgb(255 255 255 / .18), transparent 55%),
+    repeating-radial-gradient(circle, #262824 0, #1E1F1C calc(var(--r) * .035), #3E9A2D calc(var(--r) * .035), #62BE45 calc(var(--r) * .09), #4FAE38 calc(var(--r) * .12));
+  box-shadow: inset 0 0 0 2px #1E1F1C, 0 0 0 1px rgb(0 0 0 / .3); }
 
-/* watering-in drops (2D overlay above the scene) */
-.drops { position: absolute; inset: 10% 15% 30%; pointer-events: none; opacity: 0; }
-.drops i { position: absolute; top: 0; width: 2px; height: 12px; border-radius: 2px; background: linear-gradient(transparent, #7CC8F2); animation: raindrop var(--d) linear var(--dl) infinite; }
-@keyframes raindrop { from { transform: translateY(-20px); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(var(--fall, 260px)); opacity: 0; } }
 
 @media (max-width: 960px) {
   .build-pin { height: 300vh; }
@@ -266,7 +332,42 @@ html.lenis, html.lenis body { height: auto; }
   .build-copy .tag { margin-top: .7rem; }
   .scene { --u: min(56vw, 30vh, 300px); margin-top: 4vh; }
 }
-@media (prefers-reduced-motion: reduce) { .drops { display: none; } }
+
+/* ---------- grass build: tabs, step list, options ---------- */
+.grass-pin { height: 460vh; }
+.grass-copy h2 { font-size: clamp(1.9rem, 3.4vw, 3rem); margin-bottom: 1rem; }
+.g-tabs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 1rem; background: var(--paper); border-radius: 999px; box-shadow: var(--shadow); }
+.g-tabs button { font: 600 .78rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: .7rem 1.05rem; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); cursor: pointer; transition: background .25s, color .25s; }
+.g-tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.g-tabs button:focus-visible, .g-chips button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.g-steps { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .15rem .6rem; counter-reset: gs; max-width: 560px; }
+#panelNat .g-steps { grid-template-columns: 1fr; max-width: 420px; }
+.g-steps li { counter-increment: gs; display: grid; grid-template-columns: 1.9rem 1fr; align-items: baseline; padding: .42rem .55rem; border-radius: var(--r); font-size: .92rem; line-height: 1.25; opacity: .36; transition: opacity .3s, background .3s, box-shadow .3s; }
+.g-steps li::before { content: counter(gs, decimal-leading-zero); font: 600 .7rem/1 var(--f-mono); color: var(--brand-deep); }
+.g-steps li.on { opacity: 1; }
+.g-steps li.now { background: var(--paper); box-shadow: var(--shadow); }
+.g-steps small { grid-column: 2; display: block; margin-top: .15rem; color: var(--ink-2); font-size: .78rem; }
+.g-opts { display: flex; flex-wrap: wrap; gap: .7rem 1.4rem; margin-bottom: 1.1rem; }
+.g-opts .mono { display: block; margin-bottom: .35rem; font-size: .64rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); }
+.g-chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.g-chips button { font: 600 .78rem/1 var(--f-body); padding: .5rem .75rem; border: 1.5px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; transition: border-color .2s, background .2s, color .2s; }
+.g-chips button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-tint); color: var(--brand-deep); }
+@media (max-height: 780px) and (min-width: 961px) { .g-steps small { display: none; } .grass-copy h2 { margin-bottom: .7rem; } }
+@media (max-width: 960px) {
+  .grass-pin { height: 380vh; }
+  .grass-copy h2 { font-size: var(--s1); margin-bottom: .6rem; }
+  .grass-copy .eyebrow { margin-bottom: .4rem; }
+  .g-tabs { margin-bottom: .6rem; }
+  .g-tabs button { font-size: .66rem; padding: .55rem .8rem; }
+  .g-steps, #panelNat .g-steps { grid-template-columns: 1fr; margin-bottom: .5rem; }
+  .g-steps li { display: none; }
+  .g-steps li.now { display: grid; }
+  .g-opts { gap: .4rem .9rem; margin-bottom: .2rem; }
+  .g-opts .mono { font-size: .56rem; margin-bottom: .25rem; }
+  .g-chips button { font-size: .68rem; padding: .38rem .55rem; }
+  .g-panel > .btn { display: none; }   /* the floating "Plan my project" button covers this on phones */
+  .grass-copy .build-bar { margin-top: .6rem; }
+}
 
 /* ---------- gallery lightbox ---------- */
 .g:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
@@ -293,8 +394,77 @@ html.lenis, html.lenis body { height: auto; }
 }
 @media (prefers-reduced-motion: reduce) { .lb::before, .lb-fig figcaption, .lb-btn { transition: none; } }
 
-/* wall → turf hand-off: turf sits on a deeper limestone tone, opened by a thin ground-strata edge (grass / soil / sand) */
-#turfBuild { background: var(--ground-2); }
-#turfBuild::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 9px; z-index: 2; pointer-events: none;
+/* wall → grass hand-off: grass sits on a deeper limestone tone, opened by a thin ground-strata edge (grass / soil / sand) */
+#grass { background: var(--ground-2); }
+#grass::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 9px; z-index: 2; pointer-events: none;
   background: linear-gradient(to bottom, var(--grass) 0 3px, var(--soil) 3px 6px, var(--sand) 6px 9px); }
 #wallBuild { border-bottom: 1px solid var(--line); }
+
+/* ---------- portrait tablets (561–960px): stacked layout, but the scenes get room to breathe ---------- */
+@media (min-width: 561px) and (max-width: 960px) {
+  .iso { --u: min(50vw, 30vh, 380px); }
+  .scene { --u: min(56vw, 32vh, 400px); }
+  .steps .step:last-child:nth-child(odd) { grid-column: 1 / -1; }   /* 5th step spans the full row, not orphaned next to a gap */
+}
+
+/* ---------- desktop / landscape-tablet heights: fit the pinned sections to short screens (e.g. 1180×820, 1024×768, 1366×768) ---------- */
+@media (min-width: 961px) {
+  /* layers + builds: clear the nav, and let the big headings shrink with the screen height */
+  .layers-sticky { padding-top: clamp(64px, 9vh, 96px); box-sizing: border-box; }
+  .layers h2, .build-copy:not(.grass-copy) h2 { font-size: min(var(--s3), 6.4vh); }
+  .grass-copy h2 { font-size: min(clamp(1.9rem, 3.4vw, 3rem), 5.2vh); }
+  .layers h2 { margin-bottom: min(1.6rem, 2.4vh); }
+  .layer-list li { padding-block: min(.7rem, 1.2vh); }
+  /* brand mark: the logo leaves room above and below for its pointer cards */
+  .mark-stage { --S: min(56vh, 74vw, 560px, calc(100svh - 460px)); min-width: 260px; min-height: 260px; }
+  /* services: cards end above the floating "Plan my project" button */
+  .services-sticky { padding: clamp(56px, 8vh, 90px) 0 88px; box-sizing: border-box; gap: min(2rem, 3vh); }
+  .svc-img { aspect-ratio: auto; height: clamp(150px, 30vh, 315px); }
+  .svc-body { padding: min(1.4rem, 2.2vh) 1.5rem min(1.6rem, 2.4vh); gap: min(.9rem, 1.4vh); }
+}
+
+/* ---------- small laptops / landscape tablets (961–1279px): pull the layer stack left so its labels are never clipped ---------- */
+@media (min-width: 961px) and (max-width: 1279px) {
+  .iso { --u: min(23vw, 44vh, 300px); margin-right: 20vw; }
+  .labels .label { font-size: .66rem; padding: .4rem .5rem; --gap: 22px; }
+}
+
+/* =========================================================
+   Refinement pass: calmer palette + lighter, more refined type.
+   Kept in one block so it is easy to tune or remove.
+   ========================================================= */
+:root {
+  --ground: #F4F4EF;          /* soft limestone, a touch warmer */
+  --ground-2: #EAEBE3;
+  --ink: #171A16;             /* softer than near-black */
+  --ink-2: #565C53;
+  --line: #DEE1D7;
+  --brand: #27A02B;           /* a little less neon; the logo keeps its exact green */
+  --brand-deep: #1E5D2A;      /* forest green for accents and italic serif words */
+  --brand-tint: #E6F2E1;
+  --r: 8px;
+  --shadow: 0 1px 2px rgb(23 26 22 / .04), 0 10px 30px -6px rgb(23 26 22 / .1);
+}
+body { line-height: 1.65; text-rendering: optimizeLegibility; font-feature-settings: "kern", "liga"; }
+::selection { background: #CFE8C6; color: var(--ink); }
+p { text-wrap: pretty; }
+
+/* headings: slightly lighter and less stretched, so they read refined rather than loud */
+h1, h2 { font-stretch: 106%; letter-spacing: -.025em; }
+h2 { font-weight: 750; line-height: 1.02; }
+h3 { font-weight: 650; letter-spacing: -.012em; }
+h1 em, h2 em { letter-spacing: -.005em; }
+
+/* small caps labels: smaller, airier */
+.eyebrow { font-size: .72rem; letter-spacing: .14em; }
+.mono { letter-spacing: .06em; }
+
+/* body copy a hair softer in colour, with comfortable measure */
+.muted, .step p, .layer-list small, .build-copy p:not(.tag) { color: var(--ink-2); }
+
+/* buttons + nav: gentler weight, smoother hover */
+.btn { font-weight: 550; letter-spacing: .005em; transition: transform .25s cubic-bezier(.2,.8,.2,1), background .25s, color .25s, border-color .25s, box-shadow .25s; }
+.btn-solid:hover { box-shadow: 0 8px 20px -8px rgb(30 93 42 / .55); }
+.nav { background: rgb(255 255 255 / .86); box-shadow: 0 1px 0 rgb(23 26 22 / .04), 0 8px 28px -10px rgb(23 26 22 / .14); }
+.nav-links a { font-weight: 500; color: var(--ink-2); transition: color .2s; }
+.nav-links a:hover, .nav-links a.on { color: var(--ink); }

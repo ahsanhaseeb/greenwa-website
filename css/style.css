@@ -150,7 +150,7 @@ p { margin: 0; }
 .layers-progress span { display: block; height: 100%; width: 100%; background: var(--brand); transform: scaleX(0); transform-origin: left; }
 
 .layers-stage { position: relative; height: 100%; display: grid; place-items: center; perspective: 1800px; }
-.iso { --u: min(26vw, 46vh, 380px); position: relative; width: var(--u); height: calc(var(--u) * .78); transform-style: preserve-3d; transform: rotateX(58deg) rotateZ(-38deg); margin-top: 22vh; margin-right: 8vw; }
+.iso { --u: min(26vw, 46vh, 380px); position: relative; width: var(--u); height: calc(var(--u) * .78); transform-style: preserve-3d; transform: rotateX(58deg) rotateZ(-38deg); margin-top: 22vh; margin-right: 13vw; }
 .slab { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
 .slab .face { position: absolute; }
 .slab-pavers .top { transform-style: preserve-3d; }
@@ -173,16 +173,40 @@ p { margin: 0; }
 .labels .label::after { content: ""; position: absolute; top: calc(50% + var(--dy, 0px)); left: calc(-1 * var(--gap) - 3.5px); width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--paper); }
 .slab .anc { position: absolute; right: 0; top: 50%; width: 0; height: 0; }
 
-.slab-subgrade .face { background: radial-gradient(circle at 30% 40%, var(--soil-dark) 1.2px, transparent 1.6px) 0 0/11px 11px, radial-gradient(circle at 70% 70%, #8C6A4B 1.5px, transparent 2px) 0 0/15px 15px, var(--soil); }
-.slab-fabric .face { background: repeating-linear-gradient(45deg, rgb(255 255 255 / .09) 0 2px, transparent 2px 6px), repeating-linear-gradient(-45deg, rgb(0 0 0 / .12) 0 2px, transparent 2px 6px), var(--fabric); }
-.slab-base .face { background: radial-gradient(circle at 30% 30%, var(--base-light) 2.4px, transparent 3px) 0 0/12px 12px, radial-gradient(circle at 70% 60%, var(--base-dark) 2.8px, transparent 3.4px) 3px 4px/14px 14px, var(--base); }
-.slab-sand .face { background: radial-gradient(circle, var(--sand-dark) .8px, transparent 1.2px) 0 0/6px 6px, var(--sand); }
-.slab-pavers .top { background: var(--sand-dark); }
-.slab-pavers .front, .slab-pavers .side { background: var(--brick); }
-.pv { --t: 7px; position: absolute; background: var(--brick); border-radius: 1px; box-shadow: inset 2px 2px 0 rgb(255 255 255 / .16), inset -1px -1px 0 rgb(0 0 0 / .15); transform-style: preserve-3d; transform: translateZ(calc(var(--z, 0px) + var(--t))) rotateZ(var(--r, 0deg)); opacity: var(--o, 0); }
+/* layer materials: painted canvas textures (see tex() in main.js) */
+.slab-subgrade .face { background: var(--tx-lsoil) 0 0/76px 76px, #866244; }
+.slab-subgrade .top { background: repeating-linear-gradient(90deg, rgb(255 255 255 / .045) 0 16.6%, rgb(0 0 0 / .035) 16.6% 33.3%), var(--tx-lsoil) 0 0/76px 76px, #866244; }   /* levelled + compactor passes */
+.slab-subgrade .front { background: linear-gradient(to bottom, rgb(255 230 190 / .08), rgb(40 25 12 / .25)), var(--tx-lsoil) 0 0/76px 76px, #7A5A3E; }
+.slab-base .face { background: var(--tx-rbase) 0 0/60px 60px, #8E897E; }
+.slab-base .front { background: linear-gradient(to bottom, transparent calc(50% - 1px), rgb(0 0 0 / .16) calc(50% - 1px) 50%, transparent 50%), var(--tx-rbase) 0 0/60px 60px, #8E897E; }   /* laid and compacted in two lifts */
+.slab-base .side { background: linear-gradient(90deg, transparent calc(50% - 1px), rgb(0 0 0 / .16) calc(50% - 1px) 50%, transparent 50%), var(--tx-rbase) 0 0/60px 60px, #8E897E; }   /* side face: its height runs along x */
+.slab-dust .face { background: var(--tx-cdust) 0 0/44px 44px, #B8B3A8; }
+.slab-dust .top { background: repeating-linear-gradient(0deg, rgb(255 255 255 / .07) 0 9%, transparent 9% 18%), linear-gradient(90deg, rgb(255 255 255 / .06), transparent 40%), var(--tx-cdust) 0 0/44px 44px, #BDB8AD; }   /* screeded flat with a straight edge */
+.slab-pavers .top { background: var(--tx-cdust) 0 0/44px 44px, #A8A296; transition: background .5s; }
+/* the paver course seen from the side: one paver edge per stretcher, with a joint between each */
+.slab-pavers .front { background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1.5px), rgb(245 238 222 / .85) calc(20% - 1.5px) 20%), linear-gradient(90deg, #B65A3F 0 20%, #A84E36 20% 40%, #C2694B 40% 60%, #AE5239 60% 80%, #BC6044 80%); }
+.slab-pavers .side { background: repeating-linear-gradient(180deg, transparent 0 calc(12.5% - 1.5px), rgb(245 238 222 / .85) calc(12.5% - 1.5px) 12.5%), var(--brick); }
+/* concrete edging: four beams forming a hollow ring a little wider than the pavers, level with their tops */
+.slab-edge { inset: -4%; }
+.beam { position: absolute; transform-style: preserve-3d; }
+.slab-edge .face { background: radial-gradient(circle, rgb(0 0 0 / .13) .6px, transparent 1px) 0 0/5px 5px, radial-gradient(circle, rgb(255 255 255 / .4) .6px, transparent 1px) 2px 2px/7px 7px, #CAC8BF; }
+.slab-edge .top { background-color: #D6D4CC; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .16); }
+.slab-edge .top::after { background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), rgb(0 0 0 / .22) calc(25% - 1px) 25%); }   /* tooled control joints */
+.slab-edge .beam:nth-child(n+3) .top::after { background: repeating-linear-gradient(180deg, transparent 0 calc(25% - 1px), rgb(0 0 0 / .22) calc(25% - 1px) 25%); }
+/* whitewash sand: a lattice of the joints only */
+.slab-ww .top { background: none; }
+.slab-ww .top::after { display: none; }
+.jl { position: absolute; border-radius: 1px; background: radial-gradient(circle, rgb(150 135 100 / .45) .5px, transparent .9px) 0 0/3px 3px, #F6F1E4; box-shadow: 0 0 2px rgb(255 255 255 / .8); }
+.pv { --t: 7px; position: absolute; background: var(--brick); border-radius: 1px; box-shadow: inset 2px 2px 0 rgb(255 255 255 / .16), inset -1px -1px 0 rgb(0 0 0 / .15); transform-style: preserve-3d; transform: translateZ(calc(var(--z, 0px) + var(--t))) rotateZ(var(--r, 0deg)); }
+/* six-sided paver: front, right, back, left and underside, each shaded, so it never looks hollow mid-air */
 .pv b { position: absolute; background: inherit; }
-.pv b:first-child { left: 0; right: 0; top: 100%; height: var(--t); transform-origin: top; transform: rotateX(-90deg); box-shadow: inset 0 0 0 9999px rgb(0 0 0 / 0.28); }
-.pv b:last-child { top: 0; bottom: 0; left: 100%; width: var(--t); transform-origin: left; transform: rotateY(90deg); box-shadow: inset 0 0 0 9999px rgb(0 0 0 / 0.45); }
+.pv .f, .pv .k { left: 0; right: 0; height: var(--t); transform-origin: top; transform: rotateX(-90deg); }
+.pv .f { top: 100%; box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .28); }
+.pv .k { top: 0; box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .2); }
+.pv .s, .pv .l { top: 0; bottom: 0; width: var(--t); transform-origin: left; transform: rotateY(90deg); }
+.pv .s { left: 100%; box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .45); }
+.pv .l { left: 0; box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .35); }
+.pv .u { inset: 0; transform: translateZ(calc(-1 * var(--t))); box-shadow: inset 0 0 0 9999px rgb(0 0 0 / .55); }
 .pv.t2 { background: #A84E36; } .pv.t3 { background: #C2694B; }
 
 .stamp { position: absolute; right: 6%; top: 14%;   /* top corner: the layer labels own the right side now */ font: 900 var(--s2)/1 var(--f-display); font-stretch: 125%; text-transform: uppercase; color: var(--brand-deep); border: 4px solid currentColor; padding: .4rem .9rem; border-radius: 6px; transform: rotate(-8deg) scale(1.6); opacity: 0; transition: opacity .35s, transform .45s cubic-bezier(.3,1.6,.5,1); pointer-events: none; }
@@ -209,7 +233,7 @@ p { margin: 0; }
 .svc-end { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 1.4rem; padding: 2rem; background: var(--brand); border: 0; color: var(--ink); flex-basis: min(70vw, 420px); }
 .svc-end .big { font: 800 var(--s2)/1.05 var(--f-display); font-stretch: 112%; }
 
-/* ---------- builds (wall + turf) ---------- */
+/* ---------- builds (wall + grass) ---------- */
 .builds { position: relative; }
 .build-pin { position: relative; height: 340vh; }
 .build { position: sticky; top: 0; height: 100vh; height: 100svh; width: min(1240px, 100% - 2 * var(--gutter)); margin: 0 auto; display: grid; grid-template-columns: 5fr 7fr; gap: clamp(2rem, 5vw, 5rem); align-items: center; }
@@ -222,7 +246,7 @@ p { margin: 0; }
 /* ---------- process ---------- */
 .process { padding: clamp(5rem, 9vw, 8rem) 0; background: var(--paper); }
 .process h2 { max-width: 16ch; }
-.steps { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-top: 4rem; padding-top: 2.4rem; }
+.steps { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.6rem; margin-top: 4rem; padding-top: 2.4rem; }
 .steps-line { position: absolute; top: 18.5px; left: 9px; right: 0; height: 3px; border-radius: 3px; background: var(--line); }
 .steps-line span { display: block; height: 100%; border-radius: inherit; background: var(--brand); transform: scaleX(0); transform-origin: left; }
 .step { position: relative; opacity: 0; transform: translateY(24px); transition: opacity .6s, transform .6s; }

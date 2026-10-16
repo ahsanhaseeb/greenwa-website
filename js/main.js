@@ -117,11 +117,13 @@
      ========================================================= */
   const iso = $("#iso"), layersSec = $("#layers"), layerLis = $$("#layerList li"), stamp = $("#stamp"), bar = $("#layersBar");
   const LAYERS = [
-    { cls: "slab-subgrade", h: .17, name: "Subgrade · compacted", short: "Subgrade" },
-    { cls: "slab-fabric",   h: .02, name: "Geotextile", short: "Geotextile" },
-    { cls: "slab-base",     h: .13, name: "Road base · 100 mm", short: "Road base" },
-    { cls: "slab-sand",     h: .055, name: "Bedding sand · 30 mm", short: "Bedding sand" },
-    { cls: "slab-pavers",   h: .07, name: "Pavers · 60 mm", short: "Pavers" },
+    // in: when the layer flies in. edge = a concrete ring that drops AROUND the pavers; ww = whitewash sand that sinks into the joints
+    { cls: "slab-subgrade", h: .16, name: "Soil · levelled", short: "Soil", in: [0.03, 0.11] },
+    { cls: "slab-base",     h: .13, name: "Roadbase", short: "Roadbase", in: [0.11, 0.19] },
+    { cls: "slab-dust",     h: .06, name: "Cracker dust", short: "Cracker dust", in: [0.19, 0.27] },
+    { cls: "slab-pavers",   h: .07, name: "Pavers · stretcher", short: "Pavers", in: [0.27, 0.35] },
+    { cls: "slab-edge",     h: .07, px: 7, name: "Concrete edging", short: "Edging", in: [0.5, 0.58] },
+    { cls: "slab-ww",       h: 0, px: 2, name: "Whitewash sand · joints", mid: "Whitewash sand", short: "Whitewash", in: [0.58, 0.66] },
   ];
   let slabs = [], pavers = [], labels = [], U = 400;
   const labelBox = document.createElement("div"); labelBox.className = "labels"; iso.parentElement.appendChild(labelBox);
@@ -136,10 +138,27 @@
     shadow = document.createElement("div"); shadow.className = "iso-shadow"; iso.appendChild(shadow);
     LAYERS.forEach((L, i) => {
       const s = document.createElement("div"); s.className = "slab " + L.cls;
-      s.style.setProperty("--h", (L.h * U).toFixed(1) + "px");
-      s.innerHTML = `<div class="face top"></div><div class="face front"><i class="anc"></i></div><div class="face side"></div>`;
+      s.style.setProperty("--h", (L.h * U + (L.px || 0)).toFixed(1) + "px");
+      const faces = (anc, x, y, w, d) => `<div class="beam" style="left:${x}%;top:${y}%;width:${w}%;height:${d}%"><div class="face top"></div><div class="face front">${anc ? '<i class="anc"></i>' : ""}</div><div class="face side"></div></div>`;
+      if (L.cls === "slab-edge") {
+        // hollow ring: four concrete beams, the pavers sit inside it
+        const t = 4 / 1.08;
+        s.innerHTML = faces(true, 0, 100 - t, 100, t) + faces(false, 0, 0, 100, t) + faces(false, 0, t, t, 100 - 2 * t) + faces(false, 100 - t, t, t, 100 - 2 * t);
+      } else if (L.cls === "slab-ww") {
+        // whitewash sand: only the joint lines of the stretcher bond, so it fills the gaps instead of covering the pavers
+        s.innerHTML = `<div class="face top"><i class="anc"></i></div>`;
+        const tp = s.firstChild, ROWS = 8, COLS = 5;
+        for (let r = 0; r < ROWS; r++) {
+          if (r) { const l = document.createElement("i"); l.className = "jl"; l.style.cssText = `left:0;width:100%;top:calc(${r / ROWS * 100}% - 1.5px);height:3px`; tp.appendChild(l); }
+          const off = r % 2 ? -0.5 : 0;
+          for (let c = 0; c <= COLS; c++) {
+            const x = (c + off) / COLS; if (x <= 0.01 || x >= 0.99) continue;
+            const l = document.createElement("i"); l.className = "jl"; l.style.cssText = `left:calc(${x * 100}% - 1.5px);width:3px;top:${r / ROWS * 100}%;height:${100 / ROWS}%`; tp.appendChild(l);
+          }
+        }
+      } else s.innerHTML = `<div class="face top"></div><div class="face front"><i class="anc"></i></div><div class="face side"></div>`;
       iso.appendChild(s); slabs.push(s);
-      const lb = document.createElement("span"); lb.className = "label"; lb.textContent = vw < 561 ? L.short : L.name; labelBox.appendChild(lb); labels.push(lb);
+      const lb = document.createElement("span"); lb.className = "label"; lb.textContent = vw < 561 ? L.short : vw < 1280 ? (L.mid || L.name) : L.name; labelBox.appendChild(lb); labels.push(lb);
     });
     // stretcher-bond pavers on the top face of the last slab
     const top = $(".slab-pavers .top", iso), ROWS = 8, COLS = 5;
@@ -148,7 +167,7 @@
       for (let c = 0; c <= COLS; c++) {
         let x0 = (c + off) / COLS, x1 = (c + off + 1) / COLS;
         x0 = Math.max(0, x0); x1 = Math.min(1, x1); if (x1 - x0 < 0.01) continue;
-        const p = document.createElement("i"); p.className = "pv t" + (1 + ((r * 7 + c * 3) % 3)); p.innerHTML = "<b></b><b></b>";
+        const p = document.createElement("i"); p.className = "pv t" + (1 + ((r * 7 + c * 3) % 3)); p.innerHTML = "<b class=\"f\"></b><b class=\"s\"></b><b class=\"k\"></b><b class=\"l\"></b><b class=\"u\"></b>";   // all sides + underside: a solid brick
         p.style.cssText = `left:calc(${x0 * 100}% + 1.5px);width:calc(${(x1 - x0) * 100}% - 3px);top:calc(${r / ROWS * 100}% + 1.5px);height:calc(${100 / ROWS}% - 3px)`;
         p.dataset.k = Math.random() * 0.55 + (r / ROWS) * 0.45;   // drop order: back to front, a little random
         top.appendChild(p); pavers.push(p);
@@ -160,22 +179,28 @@
   const back = t => { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };   // overshoot ease
   const bounce = t => t < 0.7 ? Math.pow(t / 0.7, 2) : 1 - Math.sin((t - 0.7) / 0.3 * Math.PI) * 0.18 * (1 - t);   // fall, hop, rest
   const layersScene = p => {
-    const GAP = U * 0.13;
-    let z = 0, current = -1;
-    const combine = ease(seg(p, 0.74, 0.88));
-    const squash = Math.sin(seg(p, 0.86, 0.93) * Math.PI) * 0.09;   // the stack "thuds" as it locks
+    const GAP = U * 0.11;
+    let current = -1;
+    const combine = ease(seg(p, 0.7, 0.84));
+    const squash = Math.sin(seg(p, 0.82, 0.89) * Math.PI) * 0.09;   // the stack "thuds" as it locks
+    const sink = ease(seg(p, 0.84, 0.9));                             // whitewash sand brushed down into the joints
+    // compact (locked) and exploded heights: the edging shares the pavers' level, the whitewash sits on the paver tops
+    const zc = [0], H = LAYERS.map(L => L.h * U + (L.px || 0));
+    for (let i = 1; i < 4; i++) zc[i] = zc[i - 1] + H[i - 1];
+    const pTop = zc[3] + H[3] + 7;
+    zc[4] = zc[3]; zc[5] = lerp(pTop + U * 0.03, pTop - 3, sink);
+    const ex = [0, 1, 2, 3].map(i => zc[i] + i * GAP);
+    ex[4] = pTop + 3.6 * GAP; ex[5] = ex[4] + H[4] + 0.8 * GAP;
     // camera: slow orbit across the scroll + idle sway + pointer tilt
     const rx = lerp(66, 54, ease(p)) - tiltY * 10;
     const rz = lerp(-58, -30, ease(p)) + tiltX * 16;
     iso.style.transform = reduce ? "" : `rotateX(${rx.toFixed(2)}deg) rotateZ(${rz.toFixed(2)}deg)`;
-    motes.style.opacity = clamp(seg(p, 0.02, 0.1)) * (1 - seg(p, 0.86, 0.96));
+    motes.style.opacity = clamp(seg(p, 0.02, 0.1)) * (1 - seg(p, 0.88, 0.97));
     shadow.style.opacity = (0.35 + 0.45 * clamp(seg(p, 0.03, 0.13))).toFixed(2);
     shadow.style.transform = `translateZ(-1px) scale(${(1.08 + squash * 1.5 + (1 - combine) * 0.08).toFixed(3)})`;
     slabs.forEach((s, i) => {
-      const L = LAYERS[i];
-      const compact = z, exploded = z + i * GAP;
-      z += L.h * U;
-      const raw = seg(p, 0.03 + i * 0.12, 0.13 + i * 0.12), t = ease(raw), tb = back(raw);
+      const L = LAYERS[i], compact = zc[i], exploded = ex[i];
+      const raw = seg(p, ...L.in), t = ease(raw), tb = back(raw);
       if (t > 0.02) current = i;
       const rest = lerp(exploded, compact, combine) * (1 - squash);
       const zz = lerp(rest + U * 1.1, rest, tb);
@@ -202,18 +227,18 @@
       });
     }
     // pavers drop one by one once the paver slab is placed
-    const pp = seg(p, 0.55, 0.72);
+    const pp = seg(p, 0.35, 0.5);
     pavers.forEach(el => {
       const k = +el.dataset.k, raw = seg(pp, k * 0.8, k * 0.8 + 0.2), t = bounce(raw);
       el.style.setProperty("--z", ((1 - t) * U * 0.5).toFixed(1) + "px");
       el.style.setProperty("--r", ((1 - raw) * 40 * (k > 0.5 ? 1 : -1)).toFixed(1) + "deg");
-      el.style.setProperty("--o", clamp(raw * 4));
+      el.style.visibility = raw > 0 ? "visible" : "hidden";   // no opacity fade: it would flatten the solid 3D paver
     });
     layerLis.forEach((li, i) => {
       li.classList.toggle("on", i <= current || combine > 0.5);
       li.classList.toggle("now", combine < 0.5 ? i === current : false);
     });
-    stamp.classList.toggle("show", p > 0.9);
+    stamp.classList.toggle("show", p > 0.92);
     bar.style.transform = `scaleX(${p})`;
   };
 
@@ -232,21 +257,83 @@
   /* ---------- material textures: painted once, reused as images (cheap to render) ---------- */
   const tex = (name, base, draw) => {
     const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
-    g.fillStyle = base; g.fillRect(0, 0, 128, 128); draw(g);
+    if (base) { g.fillStyle = base; g.fillRect(0, 0, 128, 128); } draw(g);
     document.documentElement.style.setProperty("--tx-" + name, `url(${c.toDataURL()})`);
   };
   const R = Math.random, dots = (g, n, cols, r0, r1) => { for (let i = 0; i < n; i++) { g.fillStyle = cols[i % cols.length]; const x = R() * 128, y = R() * 128, r = r0 + R() * (r1 - r0); for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128]]) { g.beginPath(); g.arc(x + dx, y + dy, r, 0, 7); g.fill(); } } };
   tex("soil", "#7A5A3E", g => dots(g, 260, ["#5A3F2A", "#8C6A4B", "#6A4C33", "#9A7A58"], 0.8, 2.2));
   tex("gravel", "#8C887E", g => dots(g, 170, ["#A9A59B", "#6E6A61", "#C9C4B6", "#7D796F", "#B8B3A6"], 2, 4.6));
   tex("concrete", "#B7B6AE", g => dots(g, 420, ["rgba(0,0,0,.12)", "rgba(255,255,255,.35)"], 0.5, 1.2));
-  tex("lime", "#E6D9B6", g => { dots(g, 140, ["rgba(150,125,80,.28)", "rgba(255,255,255,.4)", "rgba(120,100,60,.18)"], 0.6, 1.8); });
-  tex("improver", "#3F2C1C", g => dots(g, 300, ["#2A1D12", "#6B4E31", "#57402A"], 0.8, 2));
-  tex("grass", "#48A333", g => {
-    for (let i = 0; i < 900; i++) {
-      const x = R() * 128, y = R() * 128, l = 3 + R() * 6, a = -Math.PI / 2 + (R() - 0.5) * 0.9;
-      g.strokeStyle = ["#2E7F22", "#5DB83F", "#7FD05A", "#3B9128", "#9BE070"][i % 5]; g.lineWidth = 1 + R() * 0.8;
+  tex("lime", "#E6D9B6", g => {
+    dots(g, 160, ["rgba(150,125,80,.26)", "rgba(255,255,255,.45)", "rgba(120,100,60,.16)"], 0.6, 1.8);
+    dots(g, 46, ["rgba(95,75,40,.42)", "rgba(110,88,52,.32)"], 0.9, 2.1);   // the open pores real limestone has
+    dots(g, 14, ["rgba(85,66,36,.5)"], 1.8, 3);
+  });
+  tex("sand", "#E4D2A2", g => dots(g, 320, ["rgba(170,140,80,.3)", "rgba(255,255,255,.45)", "rgba(140,110,60,.2)"], 0.5, 1.3));
+  tex("dust", "#BCB7AC", g => dots(g, 460, ["rgba(0,0,0,.13)", "rgba(255,255,255,.4)", "#A8A397"], 0.4, 1));
+  tex("topsoil", "#4B3524", g => dots(g, 320, ["#33241A", "#6A4C33", "#5A4030", "#7D6046"], 0.6, 1.7));
+  // angular crushed stones: random 5–7 sided chips with a lit top-left edge and a shadowed bottom-right
+  const stones = (g, n, cols, r0, r1) => { for (let i = 0; i < n; i++) {
+    const x = R() * 128, y = R() * 128, r = r0 + R() * (r1 - r0), k = 5 + (R() * 3 | 0), a0 = R() * 6.3, pts = [];
+    for (let j = 0; j < k; j++) { const a = a0 + j / k * 6.283 + (R() - 0.5) * 0.6, rr = r * (0.65 + R() * 0.45); pts.push([Math.cos(a) * rr, Math.sin(a) * rr]); }
+    const col = cols[i % cols.length];
+    for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128]]) {
+      g.beginPath(); pts.forEach(([px, py], j) => j ? g.lineTo(x + dx + px, y + dy + py) : g.moveTo(x + dx + px, y + dy + py)); g.closePath();
+      g.fillStyle = "rgba(0,0,0,.28)"; g.save(); g.translate(0.9, 0.9); g.fill(); g.restore();   // contact shadow
+      g.fillStyle = col; g.fill();
+      g.strokeStyle = "rgba(255,255,255,.28)"; g.lineWidth = 0.6; g.stroke();
+    }
+  } };
+  // levelled soil: compacted brown Perth soil with sand grains, grit and the odd root
+  tex("lsoil", "#866244", g => {
+    dots(g, 700, ["#6E4F35", "#9C7A56", "#7A5A3E", "#B08E66", "#5E4430"], 0.4, 1.1);
+    stones(g, 26, ["#A88B66", "#7E654A", "#C2A782"], 0.8, 1.8);
+    for (let i = 0; i < 6; i++) { const x = R() * 128, y = R() * 128; g.strokeStyle = "rgba(60,40,24,.5)"; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y + (R() - 0.5) * 8, x + 10 + R() * 6, y + (R() - 0.5) * 6); g.stroke(); }
+  });
+  // roadbase: crushed rock in mixed sizes packed in grey-tan fines
+  tex("rbase", "#8E897E", g => {
+    dots(g, 900, ["#7A766C", "#A39E92", "#6B675E", "#B6B1A4"], 0.3, 0.9);
+    stones(g, 70, ["#B3AEA2", "#8A857A", "#C9C3B4", "#77736A", "#A49A86", "#9C978C"], 2.2, 4.6);
+    stones(g, 90, ["#A8A397", "#6F6B62", "#BDB7A9", "#8E897E"], 1, 2.2);
+  });
+  // cracker dust: very fine crushed-rock grit, light grey
+  tex("cdust", "#B8B3A8", g => {
+    dots(g, 1800, ["rgba(0,0,0,.14)", "rgba(255,255,255,.42)", "#A39E92", "#C8C3B8", "rgba(80,75,65,.2)"], 0.3, 0.75);
+    stones(g, 30, ["#9E998D", "#CFCABE"], 0.6, 1.2);
+  });
+  tex("syn", "#4FA83A", g => {
+    for (let i = 0; i < 1400; i++) {
+      const x = R() * 128, y = R() * 128, l = 2 + R() * 3, a = -Math.PI / 2 + (R() - 0.5) * 0.5;
+      g.strokeStyle = ["#3E9A2D", "#62BE45", "#88A64A", "#4FAE38"][i % 4]; g.lineWidth = 1;
       for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128]]) { g.beginPath(); g.moveTo(x + dx, y + dy); g.lineTo(x + dx + Math.cos(a) * l, y + dy + Math.sin(a) * l); g.stroke(); }
     }
+  });
+  tex("improver", "#3F2C1C", g => dots(g, 300, ["#2A1D12", "#6B4E31", "#57402A"], 0.8, 2));
+  // wrap-around helper so strokes and blobs tile seamlessly
+  const wrap = (f) => { for (const [dx, dy] of [[0, 0], [128, 0], [0, 128], [-128, 0], [0, -128], [128, 128], [-128, -128], [128, -128], [-128, 128]]) f(dx, dy); };
+  tex("grass", "#3E962C", g => {
+    // soil-dark gaps and old thatch at the base of the sward
+    for (let i = 0; i < 260; i++) { const x = R() * 128, y = R() * 128, l = 1.5 + R() * 3, a = R() * 6.3;
+      g.strokeStyle = ["rgba(40,60,20,.55)", "rgba(120,110,55,.35)", "rgba(30,45,15,.5)"][i % 3]; g.lineWidth = 1;
+      wrap((dx, dy) => { g.beginPath(); g.moveTo(x + dx, y + dy); g.lineTo(x + dx + Math.cos(a) * l, y + dy + Math.sin(a) * l); g.stroke(); }); }
+    // blades: dark at the base, lighter towards the tip, leaning roughly one way like a mown lawn
+    for (let i = 0; i < 2600; i++) {
+      const x = R() * 128, y = R() * 128, l = 2.5 + R() * 5, a = -Math.PI / 2 + 0.25 + (R() - 0.5) * 1.1, w = 0.7 + R() * 0.7;
+      const base = ["#2A6F1E", "#347F24", "#2F7521", "#3D8A2A"][i % 4], tip = ["#5DB83F", "#78C84E", "#8FD460", "#6DBF47", "#A4DB6E"][i % 5];
+      const mx = Math.cos(a) * l * 0.55, my = Math.sin(a) * l * 0.55, ex = Math.cos(a) * l, ey = Math.sin(a) * l;
+      g.lineWidth = w;
+      wrap((dx, dy) => {
+        g.strokeStyle = base; g.beginPath(); g.moveTo(x + dx, y + dy); g.lineTo(x + dx + mx, y + dy + my); g.stroke();
+        g.strokeStyle = tip; g.beginPath(); g.moveTo(x + dx + mx, y + dy + my); g.lineTo(x + dx + ex, y + dy + ey); g.stroke();
+      });
+    }
+  });
+  // big soft light/dark patches laid over the grass at a larger scale, so the repeat never shows
+  tex("gpatch", null, g => {
+    for (let i = 0; i < 26; i++) { const x = R() * 128, y = R() * 128, r = 10 + R() * 26, lt = i % 2;
+      wrap((dx, dy) => { const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+        gr.addColorStop(0, lt ? "rgba(190,235,120,.16)" : "rgba(10,45,5,.2)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+        g.fillStyle = gr; g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2); }); }
   });
 
   /* =========================================================
@@ -280,7 +367,7 @@
   const shadowEl = (sc, z) => { const e = document.createElement("div"); e.className = "scene-shadow"; e.style.transform = `translateZ(${z}px)`; sc.appendChild(e); };
 
   /* =========================================================
-     RETAINING WALL — footing, ag pipe, courses, backfill, cap, lawn
+     RETAINING WALL — footing, courses, backfill, cap, lawn
      ========================================================= */
   const wallSc = $("#wallScene"), wallTag = $("#wallTag"), wallBar = $("#wallBar");
   let W = {};
@@ -288,126 +375,205 @@
     wallSc.innerHTML = "";
     const U = wallSc.clientWidth, Dp = U * 0.8, CH = U * 0.068, BASE = U * 0.04, L = U * 0.84;
     shadowEl(wallSc, -U * 0.1 - 2);
-    const front = box(wallSc, 0, Dp * 0.62, U, Dp * 0.38, U * 0.1, "m-grass"); front.style.transform = `translateZ(${-U * 0.1}px)`; 
-    const back = box(wallSc, 0, 0, U, Dp * 0.62, U * 0.1, "m-soil"); back.style.transform = `translateZ(${-U * 0.1}px)`;
-    const soil = box(wallSc, U * 0.02, 0, U * 0.96, Dp * 0.24, U * 0.04, "m-soil");
-    const gravel = box(wallSc, U * 0.08, Dp * 0.24, L, Dp * 0.18, 1, "m-gravel");
+    const front = box(wallSc, 0, Dp * 0.62, U, Dp * 0.38, U * 0.1, "m-grass m-strata wall-shade"); front.style.transform = `translateZ(${-U * 0.1}px)`; 
+    const back = box(wallSc, 0, 0, U, Dp * 0.62, U * 0.1, "m-soil m-strata"); back.style.transform = `translateZ(${-U * 0.1}px)`;
+    const soil = box(wallSc, U * 0.02, 0, U * 0.96, Dp * 0.42, U * 0.04, "m-backfill");   // clean sand backfill, compacted in lifts
+    soil.style.setProperty("--lift", CH.toFixed(1) + "px");
     const footing = box(wallSc, U * 0.05, Dp * 0.38, U * 0.9, Dp * 0.26, BASE, "m-concrete");
-    const pipe = box(wallSc, U * 0.1, Dp * 0.3, L - U * 0.04, Dp * 0.06, U * 0.035, "m-pipe");
-    footing.style.transformOrigin = "50% 50%"; pipe.style.transformOrigin = "0 50%";
+    footing.style.transformOrigin = "50% 50%";
     const blocks = [], bl = L / 4;
     for (let r = 0; r < 5; r++) {
       const off = r % 2 ? bl / 2 : 0;
       for (let x = -off, j = 0; x < L - 1; x += bl, j++) {
         const x0 = Math.max(0, x), x1 = Math.min(L, x + bl);
         const e = box(wallSc, U * 0.08 + x0 + 1, Dp * 0.42, x1 - x0 - 2, Dp * 0.18, CH - 2, "m-lime v" + ((r * 3 + j) % 3));
+        [...e.children].forEach(f => f.style.backgroundPosition = `${(Math.random() * 64).toFixed(0)}px ${(Math.random() * 64).toFixed(0)}px`);   // no two blocks share a face
         blocks.push({ e, r, j, z: BASE + r * CH });
       }
     }
     const TOP = BASE + 5 * CH;
-    const cap = box(wallSc, U * 0.065, Dp * 0.405, U * 0.87, Dp * 0.21, U * 0.03, "m-cap");
+    // capping laid in four pieces with a joint between each, overhanging the face a little
+    const cw = U * 0.87 / 4, cap = [0, 1, 2, 3].map(k => box(wallSc, U * 0.065 + k * cw + 1, Dp * 0.4, cw - 2, Dp * 0.225, U * 0.03, "m-cap"));
     const lawn = box(wallSc, U * 0.02, 0, U * 0.96, Dp * 0.42, U * 0.018, "m-grass");
     // ground-level tags: dot sits on each lawn, label floats above it
     const stage = wallSc.parentNode; stage.querySelectorAll(".wl").forEach(e => e.remove());
     const tags = [pointer(stage, lawn.firstChild, "Raised level", 22, 45), pointer(stage, front.firstChild, "Original ground", 72, 55)];
-    W = { U, CH, BASE, TOP, soil, gravel, footing, pipe, blocks, cap, lawn, tags, stage };
+    W = { U, CH, BASE, TOP, soil, footing, blocks, cap, lawn, tags, stage };
   };
   const wallScene = p => {
     if (!W.U) return;
-    const { U, CH, BASE, TOP, soil, gravel, footing, pipe, blocks, cap, lawn, tags, stage } = W;
+    const { U, CH, BASE, TOP, soil, footing, blocks, cap, lawn, tags, stage } = W;
     camera(wallSc, p, 63, 55, -50, -30, 0);
     const f = ease(seg(p, 0.02, 0.1));
     footing.style.transform = `scaleX(${Math.max(0.001, f).toFixed(3)})`; footing.style.visibility = f > 0.001 ? "visible" : "hidden";
-    const q = ease(seg(p, 0.1, 0.18));
-    pipe.style.transform = `translateZ(${BASE}px) scaleX(${Math.max(0.001, q).toFixed(3)})`; pipe.style.visibility = q > 0.001 ? "visible" : "hidden";
     let placed = 0;
     blocks.forEach(b => {
-      const a0 = 0.2 + b.r * 0.1 + b.j * 0.012, raw = seg(p, a0, a0 + 0.06), t = ease(raw);
+      const a0 = 0.12 + b.r * 0.115 + b.j * 0.012, raw = seg(p, a0, a0 + 0.06), t = ease(raw);
       b.e.style.visibility = raw > 0.001 ? "visible" : "hidden";
       b.e.style.transform = `translate3d(0,${((1 - t) * -U * 0.08).toFixed(1)}px,${(b.z + (1 - t) * U * 0.45).toFixed(1)}px) rotateZ(${((1 - t) * (b.j % 2 ? 9 : -9)).toFixed(2)}deg)`;
     });
-    for (let r = 0; r < 5; r++) placed += ease(seg(p, 0.27 + r * 0.1, 0.31 + r * 0.1));
+    for (let r = 0; r < 5; r++) placed += ease(seg(p, 0.19 + r * 0.115, 0.23 + r * 0.115));
     const fillZ = BASE + CH * placed - (placed > 4.99 ? U * 0.012 : 0);
-    const gh = Math.max(U * 0.045 * ease(seg(p, 0.15, 0.2)), fillZ - BASE);
-    gravel.style.setProperty("--h", gh.toFixed(1) + "px"); gravel.style.transform = `translateZ(${BASE}px)`; gravel.style.visibility = gh > 0.5 ? "visible" : "hidden";
     soil.style.setProperty("--h", Math.max(U * 0.04, fillZ).toFixed(1) + "px");
-    const c = ease(seg(p, 0.74, 0.82));
-    cap.style.visibility = c > 0.001 ? "visible" : "hidden";
-    cap.style.transform = `translateZ(${(TOP + (1 - c) * U * 0.3).toFixed(1)}px)`;
+    cap.forEach((e, k) => {
+      const ck = ease(seg(p, 0.74 + k * 0.018, 0.79 + k * 0.018));
+      e.style.visibility = ck > 0.001 ? "visible" : "hidden";
+      e.style.transform = `translateZ(${(TOP + (1 - ck) * U * 0.3).toFixed(1)}px)`;
+    });
     const g = ease(seg(p, 0.84, 0.97));
     lawn.style.visibility = g > 0.001 ? "visible" : "hidden";
     lawn.style.transform = `translateZ(${(fillZ - U * 0.018 * (1 - g)).toFixed(1)}px)`;
     lawn.style.setProperty("--dry", (1 - g).toFixed(3));
     placePointers(stage, tags, [g > 0.6, g > 0.6]);
-    wallTag.textContent = p < 0.1 ? "Footing" : p < 0.2 ? "Ag pipe + gravel" : p < 0.72 ? `Course ${Math.min(5, Math.floor((p - 0.2) / 0.1) + 1)} of 5 · backfilled` : p < 0.84 ? "Capping" : "Done · lawn on top";
+    wallTag.textContent = p < 0.1 ? "Concrete footing" : p < 0.72 ? `Course ${Math.min(5, Math.max(1, Math.floor((p - 0.12) / 0.115) + 1))} of 5 · backfilled` : p < 0.84 ? "Capping" : "Done · lawn on top";
     wallBar.style.transform = `scaleX(${p.toFixed(4)})`;
   };
 
   /* =========================================================
-     TURF — improver, laser level, rolls unroll, watered, grows in
+     GRASS — tabbed builds: artificial (10 steps) / natural (4 steps), scroll-driven
      ========================================================= */
-  const turfSc = $("#turfScene"), turfTag = $("#turfTag"), turfBar = $("#turfBar"), drops = $("#turfDrops");
-  for (let i = 0; i < 46; i++) { const d = document.createElement("i"); d.style.cssText = `left:${(Math.random() * 100).toFixed(1)}%;--d:${(0.7 + Math.random() * 0.6).toFixed(2)}s;--dl:${(-Math.random()).toFixed(2)}s;--fall:${(180 + Math.random() * 140).toFixed(0)}px`; drops.appendChild(d); }
-  let T = {};
-  const buildTurf = () => {
-    turfSc.innerHTML = "";
-    const U = turfSc.clientWidth, Dp = U * 0.8;
-    shadowEl(turfSc, -U * 0.12 - 2);
-    const ground = box(turfSc, 0, 0, U, Dp, U * 0.12, "m-ground"); ground.style.transform = `translateZ(${-U * 0.12}px)`;
-    const imp = box(turfSc, U * 0.04, Dp * 0.05, U * 0.92, Dp * 0.9, U * 0.016, "m-improver"); imp.style.transformOrigin = "0 50%";
-    const laser = document.createElement("div"); laser.className = "laser"; laser.style.cssText = `left:${U * 0.04}px;width:${U * 0.92}px`; turfSc.appendChild(laser);
-    const strips = [], JX = [0.38, 0.68, 0.5];
-    for (let k = 0; k < 3; k++) {
-      const y0 = Dp * (0.05 + k * 0.3), d = Dp * 0.3 - 3;
-      const e = box(turfSc, U * 0.04, y0, U * 0.92, d, U * 0.022, "m-turf");
-      e.style.setProperty("--jx", (U * 0.92 * JX[k]).toFixed(0) + "px"); e.style.setProperty("--stripe", (U * 0.92 / 8).toFixed(0) + "px");
-      const roll = document.createElement("div"); roll.className = "roll"; roll.style.cssText = `top:${y0.toFixed(1)}px;height:${d.toFixed(1)}px`;
-      roll.innerHTML = Array.from({ length: 10 }, (_, i) => `<i style="--a:${(i * 36).toFixed(2)}deg"></i>`).join("") + "<b></b>";
-      turfSc.appendChild(roll);
-      strips.push({ e, roll });
-    }
-    const stage = turfSc.parentNode; stage.querySelectorAll(".wl").forEach(e => e.remove());
-    const tags = [
-      pointer(stage, imp.children[1], "Soil improver", 82, 50),
-      pointer(stage, ground.children[1], "Levelled sand base", 30, 70),
-      pointer(stage, strips[1].e.firstChild, "Staggered joints", JX[1] * 100, 50),
-      ...strips.map(s => { const a = document.createElement("u"); a.className = "anc"; a.style.cssText = "left:0;top:100%"; s.roll.appendChild(a); return a; })
-    ];
-    const rollTag = document.createElement("span"); rollTag.className = "wl"; rollTag.textContent = "Fresh-cut roll"; stage.appendChild(rollTag);
-    T = { U, Dp, imp, laser, strips, stage, tags: tags.slice(0, 3), rollAnc: tags.slice(3), rollTag };
-  };
-  const turfScene = p => {
-    if (!T.U) return;
-    const { U, Dp, imp, laser, strips, stage, tags, rollAnc, rollTag } = T;
-    camera(turfSc, p, 62, 56, -24, -42, 1.7);
-    const im = ease(seg(p, 0.02, 0.15));
-    imp.style.visibility = im > 0.001 ? "visible" : "hidden";
-    imp.style.transform = `scaleX(${Math.max(0.001, im).toFixed(3)})`;
-    const lz = seg(p, 0.16, 0.24);
-    laser.style.visibility = lz > 0 && lz < 1 ? "visible" : "hidden";
-    laser.style.transform = `translate3d(0,${(Dp * (0.05 + 0.9 * lz)).toFixed(1)}px,${(U * 0.016 + 2).toFixed(1)}px)`;
-    const full = U * 0.92, Z0 = U * 0.016;
-    strips.forEach((s, k) => {
-      const u = ease(seg(p, 0.25 + k * 0.15, 0.47 + k * 0.15)), w = full * u;
-      s.e.style.width = Math.max(0.5, w).toFixed(1) + "px";
-      s.e.style.visibility = u > 0.002 ? "visible" : "hidden";
-      s.e.style.transform = `translateZ(${Z0}px)`;
-      const r = lerp(U * 0.085, U * 0.032, u), spin = (w / ((U * 0.085 + U * 0.032) / 2)) * 57.3;
-      s.roll.style.setProperty("--r", r.toFixed(1) + "px");
-      s.roll.style.visibility = u < 0.995 ? "visible" : "hidden";
-      s.roll.style.transform = `translate3d(${(U * 0.04 + w).toFixed(1)}px,0,${(Z0 + r).toFixed(1)}px) rotateY(${spin.toFixed(1)}deg)`;
+  const grassPin = $("#grass"), grassBar = $("#grassBar"), grassSc = $("#grassScene"), grassCap = $("#grassCap");
+  const gTabs = $$("#grass [role=tab]"), gPanels = { art: $("#panelArt"), nat: $("#panelNat") };
+  const gOpt = { edge: "steel", pile: 30 }, EDGE_NAME = { steel: "Steel", timber: "Timber", alu: "Aluminium" };
+  let gMode = "art", GS = {};
+  const buildGrass = () => {
+    grassSc.innerHTML = "";
+    const U = grassSc.clientWidth, Dp = U * 0.8, X0 = U * 0.04, IW = U * 0.92, Y0 = Dp * 0.05, ID = Dp * 0.9;
+    shadowEl(grassSc, -U * 0.12 - 2);
+    const ground = box(grassSc, 0, 0, U, Dp, U * 0.12, "m-ground"); ground.style.transform = `translateZ(${-U * 0.12}px)`;
+    const stage = grassSc.parentNode; stage.querySelectorAll(".wl").forEach(e => e.remove());
+    const strips = (n, cls, H) => Array.from({ length: n }, (_, k) => {
+      const e = box(grassSc, X0, Y0 + ID / n * k, IW, ID / n - 2, H, cls); e.style.transformOrigin = "0 50%"; return e;
     });
-    const k = Math.min(2, Math.max(0, Math.floor((p - 0.25) / 0.15))), rolling = p > 0.27 && p < 0.74;
-    placePointers(stage, [...tags, { a: rollAnc[k], l: rollTag }], [p > 0.12 && p < 0.3, p > 0.18, p > 0.5, rolling]);
-    const wet = seg(p, 0.76, 0.9);
-    drops.style.opacity = (Math.sin(wet * Math.PI) * 0.9).toFixed(2);
-    turfSc.style.setProperty("--g", (0.3 + 0.7 * ease(seg(p, 0.84, 0.98))).toFixed(3));
-    turfSc.style.setProperty("--seam", (1 - seg(p, 0.84, 0.96)).toFixed(3));
-    turfSc.style.setProperty("--dry", (1 - seg(p, 0.76, 0.95)).toFixed(3));
-    turfTag.textContent = p < 0.16 ? "Soil prep + improver" : p < 0.25 ? "Laser levelled" : p < 0.76 ? "Rolling out · joints staggered" : p < 0.9 ? "Watering in" : "Established";
-    turfBar.style.transform = `scaleX(${p.toFixed(4)})`;
+    const rollOf = (y0, d, cls) => {
+      const r = document.createElement("div"); r.className = "roll " + cls; r.style.cssText = `top:${y0.toFixed(1)}px;height:${d.toFixed(1)}px`;
+      r.innerHTML = Array.from({ length: 18 }, (_, i) => `<i style="--a:${(i * 20).toFixed(2)}deg"></i>`).join("") + "<b></b>";   // 18 snug facets = a smooth cylinder
+      grassSc.appendChild(r); return r;
+    };
+    if (gMode === "art") {
+      const DH = U * 0.03, PH = U * (0.006 + gOpt.pile / 45 * 0.018), ET = U * (gOpt.edge === "timber" ? 0.02 : 0.01);
+      const mound = strips(5, "m-sand", 1).map((e, k) => ({ e, hi: U * [0.07, 0.1, 0.06, 0.09, 0.05][k], lo: U * [0.012, 0.022, 0.006, 0.018, 0.01][k] }));
+      const dust = box(grassSc, X0, Y0, IW, ID, DH, "m-dust"); dust.style.transformOrigin = "0 50%";
+      const bar = box(grassSc, X0 - U * 0.02, 0, IW + U * 0.04, U * 0.014, U * 0.014, "m-alu");
+      const EH = DH + PH + U * 0.004, ec = "m-edge m-" + gOpt.edge;
+      const edges = [box(grassSc, X0 - ET, Y0 - ET, IW + 2 * ET, ET, EH, ec), box(grassSc, X0 - ET, Y0 + ID, IW + 2 * ET, ET, EH, ec),
+                     box(grassSc, X0 - ET, Y0, ET, ID, EH, ec), box(grassSc, X0 + IW, Y0, ET, ID, EH, ec)];
+      const syn = [0, 1].map(k => {
+        const y0 = Y0 + ID / 2 * k, d = ID / 2 - 1.5, e = box(grassSc, X0, y0, IW, d, PH, "m-syn");
+        return { e, roll: rollOf(y0, d, "syn") };
+      });
+      const pegs = [];
+      for (let k = 0; k < 12; k++) {
+        const x = X0 + IW * (0.06 + (k % 6) * 0.176), y = k < 6 ? Y0 + ID * 0.5 : (k % 2 ? Y0 + ID * 0.04 : Y0 + ID * 0.94);
+        pegs.push(box(grassSc, x, y - U * 0.006, U * 0.012, U * 0.012, U * 0.006, "m-peg"));
+      }
+      const broom = box(grassSc, X0 - U * 0.03, 0, U * 0.16, U * 0.1, U * 0.05, "m-broom");
+      const tags = [pointer(stage, dust.children[1], "Cracker dust", 70, 50), pointer(stage, edges[3].children[0], EDGE_NAME[gOpt.edge] + " edging", 50, 60),
+                    pointer(stage, syn[1].e.firstChild, gOpt.pile + " mm artificial grass", 40, 50)];
+      GS = { mode: "art", U, Dp, X0, IW, Y0, ID, DH, PH, EH, mound, dust, bar, edges, syn, pegs, broom, tags, stage };
+    } else {
+      const old = box(grassSc, X0, Y0, IW, ID, U * 0.03, "m-grass"); old.style.setProperty("--dry", 0.55);
+      const TH = U * 0.032, top = strips(4, "m-topsoil", TH).map((e, k) => ({ e, lo: TH * [1.5, 0.7, 1.35, 0.8][k] }));
+      const JX = [0.38, 0.68, 0.5], turf = JX.map((jx, k) => {
+        const y0 = Y0 + ID / 3 * k, d = ID / 3 - 2, e = box(grassSc, X0, y0, IW, d, U * 0.02, "m-turf");
+        e.style.setProperty("--jx", (IW * jx).toFixed(0) + "px"); e.style.setProperty("--stripe", (IW / 8).toFixed(0) + "px");
+        return { e, roll: rollOf(y0, d, "") };
+      });
+      const tags = [pointer(stage, old.firstChild, "Old lawn out", 50, 50), pointer(stage, top[3].e.children[1], "Topsoil over sand", 60, 50),
+                    pointer(stage, turf[1].e.firstChild, "Fresh roll-on turf", JX[1] * 100, 50)];
+      GS = { mode: "nat", U, Dp, X0, IW, Y0, ID, TH, old, top, turf, tags, stage };
+    }
+    grassCap.textContent = "Section · " + (gMode === "art" ? "artificial" : "natural") + " grass";
   };
-  const buildScenes = () => { buildWall(); buildTurf(); };
+  // a roll that unrolls a strip from left to right
+  const unroll = (s, u, X0, IW, Z0, r0, r1) => {
+    const w = IW * u;
+    s.e.style.width = Math.max(0.5, w).toFixed(1) + "px";
+    s.e.style.visibility = u > 0.002 ? "visible" : "hidden";
+    s.e.style.transform = `translateZ(${Z0.toFixed(1)}px)`;
+    const r = lerp(r0, r1, u), spin = (w / ((r0 + r1) / 2)) * 57.3;
+    s.roll.style.setProperty("--r", r.toFixed(1) + "px");
+    s.roll.style.visibility = u > 0.002 && u < 0.995 ? "visible" : "hidden";
+    s.roll.style.transform = `translate3d(${(X0 + w).toFixed(1)}px,0,${(Z0 + r).toFixed(1)}px) rotateY(${spin.toFixed(1)}deg)`;
+    // light the facets from above-left as the roll turns, so it reads as round, not striped
+    if (s.roll.style.visibility === "visible") s.roll.querySelectorAll("i").forEach((f, i) => {
+      const c = Math.cos((i * 20 + spin + 25) / 57.3);
+      f.style.setProperty("--sh", (c > 0 ? 0.3 - c * 0.3 : 0.3 - c * 0.25).toFixed(3));
+      f.style.setProperty("--hl", Math.max(0, c - 0.75).toFixed(3));
+    });
+  };
+  const vis = (el, on) => { el.style.visibility = on ? "visible" : "hidden"; };
+  const grassScene = p => {
+    if (!GS.U) return;
+    const { U, X0, IW, Y0, ID, tags, stage } = GS;
+    camera(grassSc, p, 62, 56, -26, -40, 0);
+    if (GS.mode === "art") {
+      const { DH, PH, EH, mound, dust, bar, edges, syn, pegs, broom } = GS;
+      // 1–2: excess sand dug out, then levelled flat
+      const e1 = ease(seg(p, 0, 0.1)), e2 = ease(seg(p, 0.1, 0.18));
+      mound.forEach(m => { const h = lerp(lerp(m.hi, m.lo, e1), 0, e2); m.e.style.setProperty("--h", Math.max(0, h).toFixed(1) + "px"); vis(m.e, h > 0.6); });
+      // 3–4: cracker dust spread, then compacted down
+      const d = ease(seg(p, 0.18, 0.3)), c = ease(seg(p, 0.3, 0.37));
+      vis(dust, d > 0.001); dust.style.transform = `scaleX(${Math.max(0.001, d).toFixed(3)})`;
+      const thud = Math.sin(seg(p, 0.3, 0.37) * Math.PI * 3) * U * 0.002 * (1 - c);
+      dust.style.setProperty("--h", (lerp(DH * 1.4, DH, c) - thud).toFixed(1) + "px");
+      // 5: screed bar drawn across
+      const sc = seg(p, 0.37, 0.45);
+      vis(bar, sc > 0 && sc < 1); bar.style.transform = `translate3d(0,${(Y0 + ID * ease(sc) - U * 0.007).toFixed(1)}px,${DH.toFixed(1)}px)`;
+      dust.classList.toggle("screeded", sc > 0.5);
+      // 6: edging drops in around the outside
+      edges.forEach((e, k) => { const t = ease(seg(p, 0.45 + k * 0.016, 0.5 + k * 0.016)); vis(e, t > 0.001); e.style.transform = `translateZ(${((1 - t) * U * 0.35).toFixed(1)}px)`; });
+      // 7: grass unrolled in two widths
+      syn.forEach((s, k) => unroll(s, ease(seg(p, 0.53 + k * 0.07, 0.62 + k * 0.06)), X0, IW, DH, U * 0.075, U * 0.03));
+      // 8: pegs pinned along the join and edges
+      pegs.forEach((g, k) => { const t = ease(seg(p, 0.68 + k * 0.005, 0.71 + k * 0.005)); vis(g, t > 0.001); g.style.transform = `translateZ(${(DH + PH + (1 - t) * U * 0.2).toFixed(1)}px)`; });
+      // 9–10: whitewash sand spread in, then power broomed into the pile
+      const ww = seg(p, 0.76, 0.86), br = seg(p, 0.86, 0.97);
+      grassSc.style.setProperty("--ww", (ww * (1 - br * 0.7)).toFixed(3));
+      grassSc.style.setProperty("--fl", br.toFixed(3));
+      vis(broom, br > 0 && br < 1);
+      broom.style.transform = `translate3d(${(IW * 0.78 * ((br * 3) % 1 < 0.5 ? (br * 3 % 1) * 2 : 2 - (br * 3 % 1) * 2)).toFixed(1)}px,${(Y0 + ID * ease(br) - U * 0.05).toFixed(1)}px,${(DH + PH).toFixed(1)}px)`;
+      placePointers(stage, tags, [p > 0.2 && p < 0.5, p > 0.5 && p < 0.7, p > 0.66]);
+    } else {
+      const { TH, old, top, turf } = GS;
+      // 1: old lawn and soil lifted out and carted away
+      const o = ease(seg(p, 0.02, 0.22));
+      vis(old, o < 0.999); old.style.transform = `translate3d(${(o * U * 0.3).toFixed(1)}px,${(-o * U * 0.2).toFixed(1)}px,${(o * U * 0.7).toFixed(1)}px) rotateZ(${(o * 14).toFixed(1)}deg)`;
+      // 2: topsoil tipped in, strip by strip (uneven) — 3: levelled flat
+      const lv = ease(seg(p, 0.46, 0.6));
+      top.forEach((s, k) => {
+        const t = ease(seg(p, 0.24 + k * 0.045, 0.33 + k * 0.045));
+        vis(s.e, t > 0.001); s.e.style.transform = `scaleX(${Math.max(0.001, t).toFixed(3)})`;
+        s.e.style.setProperty("--h", lerp(s.lo, TH, lv).toFixed(1) + "px");
+      });
+      // 4: fresh rolls laid, joints staggered, then they green up
+      turf.forEach((s, k) => unroll(s, ease(seg(p, 0.6 + k * 0.1, 0.74 + k * 0.1)), X0, IW, TH, U * 0.085, U * 0.032));
+      grassSc.style.setProperty("--dry", (1 - seg(p, 0.85, 1)).toFixed(3));
+      grassSc.style.setProperty("--seam", (1 - seg(p, 0.88, 1)).toFixed(3));
+      placePointers(stage, tags, [p > 0.02 && p < 0.16, p > 0.3 && p < 0.62, p > 0.78]);
+    }
+    const lis = $$(".g-steps li", gPanels[GS.mode]); let now = -1;
+    lis.forEach((li, i) => { const on = p >= +li.dataset.at; li.classList.toggle("on", on); if (on) now = i; });
+    lis.forEach((li, i) => li.classList.toggle("now", i === now));
+    grassBar.style.transform = `scaleX(${p.toFixed(4)})`;
+  };
+  const setTab = (mode, focus) => {
+    gMode = mode;
+    gTabs.forEach(t => { const on = t.dataset.g === mode; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; if (on && focus) t.focus(); });
+    Object.entries(gPanels).forEach(([k, el]) => el.hidden = k !== mode);
+    buildGrass(); memo.delete(grassScene);
+  };
+  gTabs.forEach((t, i) => {
+    t.addEventListener("click", () => { if (t.dataset.g !== gMode) setTab(t.dataset.g); });
+    t.addEventListener("keydown", e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); setTab(gTabs[(i + 1) % 2].dataset.g, true); } });
+  });
+  $$("#grass .g-chips").forEach(group => group.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    group.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    gOpt[group.dataset.opt] = group.dataset.opt === "pile" ? +b.dataset.v : b.dataset.v;
+    buildGrass(); memo.delete(grassScene);   // keeps the current point in the build, so a finished lawn just swaps its edging / thickness
+  }));
+  const buildScenes = () => { buildWall(); buildGrass(); };
   buildScenes();
 
   /* =========================================================
@@ -447,7 +613,7 @@
     const k = p.toFixed(4) + "|" + tiltX.toFixed(3) + "|" + tiltY.toFixed(3) + "|" + vw;
     if (memo.get(fn) === k) return; memo.set(fn, k); fn(p);
   };
-  const fab = $(".fab"), quote = $("#quote"), wallPin = $("#wallBuild"), turfPin = $("#turfBuild");
+  const fab = $(".fab"), quote = $("#quote"), wallPin = $("#wallBuild");
   const frame = () => {
     const y = scrollY;
     if (Math.abs(y - lastY) > 4) { nav.classList.toggle("hide", y > lastY && y > 400 && !nav.classList.contains("open")); lastY = y; }
@@ -467,7 +633,7 @@
     drive(layersScene, layersSec, reduce ? 1 : secProgress(layersSec));
     drive(servicesScene, svcSec, secProgress(svcSec));
     drive(wallScene, wallPin, reduce ? 1 : secProgress(wallPin));
-    drive(turfScene, turfPin, reduce ? 1 : secProgress(turfPin));
+    drive(grassScene, grassPin, reduce ? 1 : secProgress(grassPin));
     if (vw > 960) {                    // pinned: the line runs left to right and lights each step as it arrives
       const d = reduce ? 1 : ease(seg(secProgress(procSec), 0.06, 0.8)), sw = steps.clientWidth;
       stepsLine.style.transform = `scaleX(${d.toFixed(4)})`;
@@ -544,18 +710,20 @@
   const ENDPOINT = "https://formsubmit.co/ajax/dd06b79f53bf7f0e0f28f17b8fab3ee6";   // FormSubmit alias for the GreenWA inbox
   const CC = ["wagreen0466", "gmail.com"].join("@");                         // team copy of every brief
   const INBOX = ["havanor.node.3", "gmail.com"].join("@");                     // only for the email-app fallback; split so scrapers miss it
-  const STORE = "gwa-planner-v2";
-  const SUBURBS = ["Joondalup", "Hillarys", "Scarborough", "Ellenbrook", "Midland", "Cottesloe", "Applecross", "Canning Vale", "Armadale", "Rockingham", "Baldivis", "Mandurah", "Fremantle", "Subiaco", "Wanneroo", "Clarkson", "Kalamunda", "Morley", "Bunbury", "Byford", "Duncraig", "Karrinyup", "Mount Lawley", "Victoria Park", "Willetton", "Bateman", "Secret Harbour", "Butler", "Alkimos", "Yanchep", "Piara Waters", "Harrisdale", "Success", "Cockburn", "Atwell", "Ocean Reef", "Mindarie", "Nedlands", "Claremont", "Como", "South Perth", "Perth"];
+  const STORE = "gwa-planner-v3";
+  const SUBURBS = ["Joondalup", "Hillarys", "Scarborough", "Ellenbrook", "Midland", "Cottesloe", "Applecross", "Canning Vale", "Armadale", "Rockingham", "Baldivis", "Fremantle", "Subiaco", "Wanneroo", "Clarkson", "Kalamunda", "Morley", "Byford", "Duncraig", "Karrinyup", "Mount Lawley", "Victoria Park", "Willetton", "Bateman", "Secret Harbour", "Butler", "Alkimos", "Yanchep", "Piara Waters", "Harrisdale", "Success", "Cockburn", "Atwell", "Ocean Reef", "Mindarie", "Nedlands", "Claremont", "Como", "South Perth", "Perth"];
   const FOLLOW = {
     "Paving": { q: "Where's the paving going?", o: ["Driveway", "Alfresco / patio", "Pool surround", "Paths", "Not sure yet"], size: "area" },
     "Retaining walls": { q: "Roughly how tall will the wall be?", o: ["Under 500 mm", "500 mm – 1 m", "Over 1 m", "Not sure"], size: "length" },
-    "Turf & lawns": { q: "Real turf or synthetic?", o: ["Real turf", "Synthetic", "Help me choose"], size: "area" },
+    "Artificial & natural grass": { q: "Artificial or natural grass?", o: ["Artificial grass", "Natural grass", "Help me choose"], size: "area" },
+    "Side access & backyards": { q: "Which part needs work?", o: ["Side access", "Backyard", "Both"], size: "area" },
     "Landscaping": { q: "Which part of the property?", o: ["Front yard", "Backyard", "Both", "Courtyard / side"], size: "area" },
   };
   // indicative Perth ranges (AUD) — for a ballpark only
   const RATE = {
     "Paving": () => [95, 165],
-    "Turf & lawns": a => a === "Synthetic" ? [75, 120] : [28, 48],
+    "Artificial & natural grass": a => a === "Artificial grass" ? [75, 120] : [28, 48],
+    "Side access & backyards": () => [80, 170],
     "Landscaping": () => [85, 210],
     "Retaining walls": a => a === "Over 1 m" ? [1100, 1900] : a === "500 mm – 1 m" ? [600, 1050] : [320, 600],
   };
@@ -701,11 +869,12 @@
   const checkSuburb = v => {
     v = v.replace(/\s+/g, " ").trim();
     if (/^\d+$/.test(v)) {
-      if (v.length !== 4) return ["Postcodes have 4 digits, e.g. 6027. Or type the suburb name."];
-      if (+v < 6000 || +v > 6999) return ["That's not a WA postcode (they run 6000–6999). We work across Perth and the South West."];
+      if (v.length !== 4) return ["Postcodes have 4 digits, e.g. 6035. Or type the suburb name."];
+      if (+v < 6000 || +v > 6999) return ["That's not a WA postcode (they run 6000–6999)."];
+      if (+v > 6199) return ["Sorry, we only work in the Perth metro area (postcodes 6000–6199)."];
       return [null, v, `Postcode ${v}`];
     }
-    if (/\d/.test(v)) return ["Please type just the suburb name or just the postcode, e.g. Joondalup or 6027."];
+    if (/\d/.test(v)) return ["Please type just the suburb name or just the postcode, e.g. Yanchep or 6035."];
     if (!/^\p{L}[\p{L}' .-]*$/u.test(v)) return ["Please use letters only for the suburb name."];
     if (v.length < 3) return ["That's too short. Please type the full suburb name."];
     if (v.length > 30) return ["That's too long for a suburb name."];
@@ -762,7 +931,7 @@
     },
     suburb: async (_, back) => {
       await say("Which suburb is the property in? (Or the postcode.)");
-      const v = await ask({ ph: "e.g. Joondalup or 6027", ac: "address-level2", max: 30, list: "suburbList", val: S.suburb || "", check: checkSuburb, back });
+      const v = await ask({ ph: "e.g. Yanchep or 6035", ac: "address-level2", max: 30, list: "suburbList", val: S.suburb || "", check: checkSuburb, back });
       if (v === BACK) return BACK;
       if (/^\d+$/.test(v)) { S.suburb = v; return say(`Postcode ${v}, got it. We'll confirm the exact spot when we call.`); }
       const known = SUBURBS.find(s => s.toLowerCase() === v.toLowerCase());
@@ -921,7 +1090,7 @@
     }
   };
 
-  const run = async (preset, skipResume) => {
+  const run = async (preset, skipResume, kind) => {
     GEN++; busy = false; waitText = null; input.disabled = send.disabled = true; showErr("");
     log.innerHTML = ""; estCard.hidden = true; S = fresh();
     const saved = !preset && !skipResume && load();
@@ -932,10 +1101,11 @@
       forget(); log.innerHTML = "";
     }
     if (preset) {
-      await say([`Hi! Let's plan your <b>${esc(preset)}</b> project. 👋`, "A few quick questions and I'll put together your brief, plus a ballpark price."]);
+      await say([`Hi! Let's plan your <b>${esc(kind ? kind.toLowerCase() : preset)}</b> project. 👋`, "A few quick questions and I'll put together your brief, plus a ballpark price."]);
       await say("Anything else to add to the same job? Tap any extras, or just tap Done.");
       const extra = await options(Object.keys(FOLLOW).filter(s => s !== preset), { multi: true, optional: true });
       S.services = [preset, ...extra];
+      if (kind) { S.kind[preset] = kind; return flow("size:" + preset, ["services"]); }
       return flow("kind:" + preset, ["services"]);
     }
     await say(["Hi! I'm the GreenWA project planner. 👋", "Answer a few quick questions and I'll put together your brief, plus a ballpark price. You can go back or edit anything before it's sent."]);
@@ -947,7 +1117,7 @@
   new IntersectionObserver(([e]) => e.isIntersecting && start(), { threshold: 0.35 }).observe($("#chat"));
   $("#chatReset").addEventListener("click", () => { started = true; forget(); run(null, true); });
   $$("[data-ask]").forEach(b => b.addEventListener("click", () => {
-    goTo(quote); started = true; run(b.dataset.ask);
+    goTo(quote); started = true; run(b.dataset.ask, false, b.dataset.kind);
   }));
   $$(".svc[data-svc]").forEach(c => c.addEventListener("click", e => { if (!e.target.closest("button")) $("[data-ask]", c).click(); }));
 
