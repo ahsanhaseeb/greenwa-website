@@ -289,6 +289,27 @@ p { margin: 0; }
 .chat-input input:focus { outline: none; border-color: var(--brand); }
 .chat-input .btn { padding: .7rem 1.1rem; }
 .chat-input :disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.chat-progress { height: 3px; background: var(--line); }
+.chat-progress i { display: block; height: 100%; width: 0; background: var(--brand); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.chat-err { margin: 0; padding: 0 1rem; color: #B3261E; font-size: .84rem; line-height: 1.35; max-height: 0; overflow: hidden; transition: max-height .25s, padding .25s; }
+.chat-err:not(:empty) { max-height: 4em; padding: .55rem 1rem 0; }
+.chat-input.bad input { border-color: #B3261E; background: #FFF6F5; }
+.chat-input.shake { animation: shake .35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+.opt:disabled { opacity: .4; cursor: not-allowed; }
+.opt-back { border-color: var(--line); color: var(--ink-2); }
+.opt-ghost { border-style: dashed; border-color: var(--ink-2); }
+.opt:focus-visible, .sum-edit:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.msg.me.back { opacity: .6; padding: .4rem .8rem; }
+.range-wrap .opts { animation: none; }
+.summary dd { display: flex; justify-content: space-between; align-items: baseline; gap: .6rem; }
+.sum-edit { flex: none; font: 600 .72rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--brand-deep); background: none; border: 0; padding: .3rem .2rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.summary.locked .sum-edit { display: none; }
+.msg .ref { font-family: var(--f-mono); letter-spacing: .04em; }
+.msg a { color: var(--brand-deep); font-weight: 600; }
+.sending { display: inline-flex; align-items: center; gap: .55rem; }
+.sending i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--brand-deep); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- faq ---------- */
 .faq { padding: clamp(5rem, 9vw, 8rem) 0; }

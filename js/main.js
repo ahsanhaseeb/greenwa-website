@@ -536,10 +536,14 @@
   requestAnimationFrame(drawGrass);
 
   /* =========================================================
-     PROJECT PLANNER — a short conversation that builds a brief
+     PROJECT PLANNER — a step-by-step conversation that builds a brief
+     (back / edit / resume, validated contact details, emailed via FormSubmit)
      ========================================================= */
   const log = $("#chatLog"), form = $("#chatForm"), input = $("#chatText"), send = $("#chatSend");
   const estCard = $("#estimateCard"), estVal = $("#estimateVal");
+  const INBOX = "havanor.node.3@gmail.com";
+  const ENDPOINT = `https://formsubmit.co/ajax/${INBOX}`;
+  const STORE = "gwa-planner-v2";
   const SUBURBS = ["Joondalup", "Hillarys", "Scarborough", "Ellenbrook", "Midland", "Cottesloe", "Applecross", "Canning Vale", "Armadale", "Rockingham", "Baldivis", "Mandurah", "Fremantle", "Subiaco", "Wanneroo", "Clarkson", "Kalamunda", "Morley", "Bunbury", "Byford", "Duncraig", "Karrinyup", "Mount Lawley", "Victoria Park", "Willetton", "Bateman", "Secret Harbour", "Butler", "Alkimos", "Yanchep", "Piara Waters", "Harrisdale", "Success", "Cockburn", "Atwell", "Ocean Reef", "Mindarie", "Nedlands", "Claremont", "Como", "South Perth", "Perth"];
   const FOLLOW = {
     "Paving": { q: "Where's the paving going?", o: ["Driveway", "Alfresco / patio", "Pool surround", "Paths", "Not sure yet"], size: "area" },
@@ -554,11 +558,23 @@
     "Landscaping": () => [85, 210],
     "Retaining walls": a => a === "Over 1 m" ? [1100, 1900] : a === "500 mm – 1 m" ? [600, 1050] : [320, 600],
   };
+  const unitOf = s => FOLLOW[s].size === "length" ? "m" : "m²";
+  const BACK = "\u0000back", SKIP = "\u0000skip";
   let S, busy = false, waitText = null, GEN = 0;
+
+  // progress bar + inline error line, built once
+  const chatBar = document.createElement("div"); chatBar.className = "chat-progress"; chatBar.setAttribute("role", "progressbar"); chatBar.setAttribute("aria-label", "Brief progress"); chatBar.innerHTML = "<i></i>";
+  $(".chat-top", $("#chat")).after(chatBar);
+  const stepTxt = $(".chat-top small", $("#chat"));
+  const errEl = document.createElement("p"); errEl.className = "chat-err"; errEl.id = "chatErr"; errEl.setAttribute("role", "alert");
+  form.before(errEl); input.setAttribute("aria-describedby", "chatErr");
+  const dl = document.createElement("datalist"); dl.id = "suburbList"; dl.innerHTML = SUBURBS.map(s => `<option value="${s}">`).join(""); form.appendChild(dl);
+  const showErr = m => { errEl.textContent = m || ""; form.classList.toggle("bad", !!m); input.setAttribute("aria-invalid", m ? "true" : "false"); if (m) { form.classList.remove("shake"); void form.offsetWidth; form.classList.add("shake"); } };
+  input.addEventListener("input", () => errEl.textContent && showErr(""));
 
   const scrollLog = () => log.scrollTop = log.scrollHeight;
   const bubble = (html, who = "bot") => { const d = document.createElement("div"); d.className = "msg " + who; d.innerHTML = html; log.appendChild(d); scrollLog(); return d; };
-  const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const say = (lines) => new Promise(res => {
     busy = true; lines = [].concat(lines); const g = GEN;
     const next = () => {
@@ -566,112 +582,360 @@
       if (!lines.length) { busy = false; return res(); }
       const t = document.createElement("div"); t.className = "msg bot typing"; t.innerHTML = "<i></i><i></i><i></i>"; log.appendChild(t); scrollLog();
       const line = lines.shift();
-      setTimeout(() => { t.remove(); if (g !== GEN) return; bubble(line); setTimeout(next, 180); }, reduce ? 50 : Math.min(1200, 350 + line.length * 12));
+      setTimeout(() => { t.remove(); if (g !== GEN) return; bubble(line); setTimeout(next, 160); }, reduce ? 50 : Math.min(1000, 300 + line.length * 10));
     };
     next();
   });
-  const options = (list, { multi = false, optional = false } = {}) => new Promise(res => {
-    const wrap = document.createElement("div"); wrap.className = "opts"; const picked = new Set();
-    const finish = vals => { wrap.remove(); bubble(esc(vals.length ? vals.join(", ") : "Just that, thanks"), "me"); res(vals); };
-    list.forEach(o => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "opt"; b.textContent = o;
-      b.addEventListener("click", () => {
-        if (!multi) return finish([o]);
-        picked.has(o) ? picked.delete(o) : picked.add(o); b.classList.toggle("sel"); doneBtn.disabled = !optional && !picked.size;
-      });
-      wrap.appendChild(b);
-    });
+
+  // tap-to-answer chips; resolves with the picked values, or BACK
+  const options = (list, { multi = false, optional = false, back = false, sel = [], doneLabel = "Done ✓" } = {}) => {
+    const wrap = document.createElement("div"); wrap.className = "opts"; const picked = new Set(sel.filter(o => list.includes(o)));
     let doneBtn;
-    if (multi) {
-      doneBtn = document.createElement("button"); doneBtn.type = "button"; doneBtn.className = "opt opt-done"; doneBtn.textContent = "Done ✓"; doneBtn.disabled = !optional;
-      doneBtn.addEventListener("click", () => finish([...picked])); wrap.appendChild(doneBtn);
-    }
+    const p = new Promise(res => {
+      const finish = vals => { wrap.remove(); bubble(esc(vals.length ? vals.join(", ") : "Just that, thanks"), "me"); res(vals); };
+      list.forEach(o => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "opt" + (picked.has(o) ? " sel" : ""); b.textContent = o;
+        if (multi) b.setAttribute("aria-pressed", picked.has(o));
+        b.addEventListener("click", () => {
+          if (!multi) return finish([o]);
+          picked.has(o) ? picked.delete(o) : picked.add(o); b.classList.toggle("sel"); b.setAttribute("aria-pressed", picked.has(o)); doneBtn.disabled = !optional && !picked.size;
+        });
+        wrap.appendChild(b);
+      });
+      if (multi) {
+        doneBtn = document.createElement("button"); doneBtn.type = "button"; doneBtn.className = "opt opt-done"; doneBtn.textContent = doneLabel; doneBtn.disabled = !optional && !picked.size;
+        doneBtn.addEventListener("click", () => finish(list.filter(o => picked.has(o)))); wrap.appendChild(doneBtn);
+      }
+      if (back) wrap.appendChild(backBtn(() => { wrap.remove(); res(BACK); }));
+    });
+    p.drop = () => wrap.remove();
     log.appendChild(wrap); scrollLog();
-  });
-  const slider = ({ min, max, step, val, unit, hint }) => new Promise(res => {
+    return p;
+  };
+  const backBtn = fn => { const b = document.createElement("button"); b.type = "button"; b.className = "opt opt-back"; b.textContent = "← Back"; b.addEventListener("click", () => { bubble("<small>← Back</small>", "me back"); fn(); }); return b; };
+
+  const slider = ({ min, max, step, val, unit, hint, back }) => new Promise(res => {
     const w = document.createElement("div"); w.className = "range-wrap";
     w.innerHTML = `<div class="row"><output>${val} ${unit}</output><button type="button" class="opt opt-done">Use this</button></div>
-      <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" aria-label="Size in ${unit}"><small class="muted">${hint}</small>`;
+      <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" aria-label="Size in ${unit}"><small class="muted">${hint}</small>
+      <div class="opts"><button type="button" class="opt opt-ghost">Not sure, use a typical size</button></div>`;
     const r = $("input", w), o = $("output", w);
     r.addEventListener("input", () => o.textContent = `${r.value} ${unit}`);
-    $("button", w).addEventListener("click", () => { w.remove(); bubble(`About ${r.value} ${unit}`, "me"); res(+r.value); });
+    $(".opt-done", w).addEventListener("click", () => { w.remove(); bubble(`About ${r.value} ${unit}`, "me"); res({ v: +r.value, sure: true }); });
+    $(".opt-ghost", w).addEventListener("click", () => { w.remove(); bubble("Not sure yet", "me"); res({ v: val, sure: false }); });
+    if (back) $(".opts", w).appendChild(backBtn(() => { w.remove(); res(BACK); }));
     log.appendChild(w); scrollLog();
   });
-  const ask = (placeholder, validate) => new Promise(res => {
-    input.disabled = send.disabled = false; input.placeholder = placeholder; input.value = ""; input.focus({ preventScroll: true });
-    waitText = async v => {
-      const err = validate && validate(v);
-      if (err) { await say(err); input.disabled = send.disabled = false; input.focus({ preventScroll: true }); return; }
-      input.disabled = send.disabled = true; input.placeholder = "Pick an option above…"; waitText = null; res(v);
+
+  // free-text answer; check(v) returns [errorMessage] or [null, cleanValue, shownValue]
+  const ask = ({ ph, type = "text", mode = "text", ac = "off", max = 60, list = null, val = "", check, back = false, skip = null }) => new Promise(res => {
+    let chips = null;
+    const close = () => { chips && chips.remove(); input.disabled = send.disabled = true; input.placeholder = "Pick an option above…"; input.value = ""; input.removeAttribute("list"); showErr(""); waitText = null; };
+    if (back || skip) {
+      chips = document.createElement("div"); chips.className = "opts";
+      if (skip) { const b = document.createElement("button"); b.type = "button"; b.className = "opt opt-ghost"; b.textContent = skip; b.addEventListener("click", () => { close(); bubble(esc(skip), "me"); res(SKIP); }); chips.appendChild(b); }
+      if (back) chips.appendChild(backBtn(() => { close(); res(BACK); }));
+      log.appendChild(chips); scrollLog();
+    }
+    Object.assign(input, { type, inputMode: mode, autocomplete: ac, maxLength: max, placeholder: ph, value: val });
+    list ? input.setAttribute("list", list) : input.removeAttribute("list");
+    input.disabled = send.disabled = false; showErr(""); input.focus({ preventScroll: true });
+    waitText = v => {
+      if (!v) return showErr("Please type an answer, or use the buttons above.");
+      const [err, clean = v, shown = clean] = check ? check(v) : [null];
+      if (err) { showErr(err); input.focus({ preventScroll: true }); return; }
+      close(); bubble(esc(shown), "me"); res(clean);
     };
   });
   form.addEventListener("submit", e => {
-    e.preventDefault(); const v = input.value.trim(); if (!v || !waitText || busy) return;
-    bubble(esc(v), "me"); input.value = ""; input.disabled = send.disabled = true; waitText(v);
+    e.preventDefault(); if (!waitText || busy) return; waitText(input.value.trim());
   });
 
-  const run = async preset => {
-    GEN++; busy = false; waitText = null; input.disabled = send.disabled = true;
-    S = { services: [], details: {} };
-    log.innerHTML = ""; estCard.hidden = true;
+  /* ---------- validators ---------- */
+  const titleCase = s => (s === s.toUpperCase() || s === s.toLowerCase() ? s.toLowerCase() : s).replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+  const checkName = v => {
+    v = v.replace(/\s+/g, " ");
+    if (/\d/.test(v)) return ["Names can't contain numbers. Please type your name."];
+    if (/[@/\\_#$%&*+=<>{}[\]|~^!?;:,"]/.test(v)) return ["Please use letters only (hyphens and apostrophes are fine)."];
+    const letters = (v.match(/\p{L}/gu) || []).length;
+    if (letters < 2) return ["That's a bit short. Please type at least 2 letters."];
+    if (v.length > 40) return ["That's too long for a name. Please keep it under 40 characters."];
+    if (!/^\p{L}[\p{L}' .-]*\p{L}\.?$/u.test(v)) return ["Please start and end your name with a letter."];
+    if (/(\p{L})\1\1/iu.test(v)) return ["That doesn't look like a real name. Could you check it?"];
+    const n = titleCase(v); return [null, n];
+  };
+  const checkPhone = v => {
+    if (/[a-z]/i.test(v)) return ["Phone numbers can only contain digits (spaces, + and brackets are fine)."];
+    if (/[^\d\s()+.-]/.test(v)) return ["That has characters a phone number can't have. Try e.g. 0412 345 678."];
+    let d = v.replace(/[^\d+]/g, "");
+    if (d.slice(1).includes("+")) return ["The + can only go at the start, e.g. +61 412 345 678."];
+    d = d.replace(/^\+?61/, "0").replace(/^00/, "0");
+    if (/^[0-9]{8}$/.test(d) && /^[689]/.test(d)) d = "08" + d;          // Perth landline typed without the area code
+    if (/^(\d)\1+$/.test(d) || /^0?(0123456789|1234567890|0412345678)$/.test(d)) return ["That number doesn't look real. Please type your actual number."];
+    if (d.length < 10) return [`That's only ${d.length} digit${d.length === 1 ? "" : "s"}. Australian numbers have 10, e.g. 0412 345 678.`];
+    if (d.length > 10) return [`That's ${d.length} digits, which is too many. Australian numbers have 10, e.g. 0412 345 678.`];
+    if (/^04\d{8}$/.test(d)) { const f = `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`; return [null, f]; }
+    if (/^0[2378]\d{8}$/.test(d)) { const f = `(${d.slice(0, 2)}) ${d.slice(2, 6)} ${d.slice(6)}`; return [null, f]; }
+    return ["Please enter an Australian mobile (04…) or landline (08…) number."];
+  };
+  const TYPO = { "gmial.com": "gmail.com", "gmai.com": "gmail.com", "gamil.com": "gmail.com", "gmal.com": "gmail.com", "gnail.com": "gmail.com", "gmaill.com": "gmail.com", "gmail.co": "gmail.com", "gmail.con": "gmail.com", "gmail.cm": "gmail.com", "gmail.om": "gmail.com", "gmail.comm": "gmail.com", "hotmial.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmai.com": "hotmail.com", "hotmail.co": "hotmail.com", "hotmail.con": "hotmail.com", "yaho.com": "yahoo.com", "yahooo.com": "yahoo.com", "yahoo.con": "yahoo.com", "yahoo.com.a": "yahoo.com.au", "outlok.com": "outlook.com", "outloo.com": "outlook.com", "outlook.con": "outlook.com", "iclod.com": "icloud.com", "icloud.co": "icloud.com", "icoud.com": "icloud.com", "bigpond.con": "bigpond.com", "bigpond.com.a": "bigpond.com", "bigpnd.com": "bigpond.com", "live.con": "live.com", "live.com.a": "live.com.au" };
+  const fixDomain = d => TYPO[d] || d.replace(/\.(con|cmo|cpm|vom|comm)$/, ".com").replace(/\.comau$/, ".com.au").replace(/\.com\.a$/, ".com.au").replace(/\.au\.com$/, ".com.au");
+  const checkEmail = v => {
+    v = v.trim().toLowerCase();
+    if (/\s/.test(v)) return ["Email addresses can't contain spaces."];
+    const at = v.split("@").length - 1;
+    if (!at) return ["That's missing the @. It should look like name@example.com."];
+    if (at > 1) return ["An email can only have one @."];
+    const [user, dom] = v.split("@");
+    if (!user) return ["Something needs to go before the @, like name@example.com."];
+    if (!dom) return ["Something needs to go after the @, like name@example.com."];
+    if (!dom.includes(".")) return [`That's missing the ending after ${dom}, like .com or .com.au.`];
+    if (/^\.|\.$|\.\./.test(user) || /^[.-]|[.-]$|\.\./.test(dom)) return ["That email has a misplaced dot. Could you check it?"];
+    if (!/^[a-z0-9!#$%&'*+\/=?^_`{|}~.-]+$/.test(user) || !/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(dom)) return ["That doesn't look like a valid email. Check for typos, e.g. name@example.com."];
+    return [null, v];
+  };
+  const lev = (a, b) => { const m = [...Array(b.length + 1).keys()]; for (let i = 1; i <= a.length; i++) { let p = m[0]; m[0] = i; for (let j = 1; j <= b.length; j++) { const t = m[j]; m[j] = Math.min(m[j] + 1, m[j - 1] + 1, p + (a[i - 1] === b[j - 1] ? 0 : 1)); p = t; } } return m[b.length]; };
+  const checkSuburb = v => {
+    v = v.replace(/\s+/g, " ").trim();
+    if (/^\d+$/.test(v)) {
+      if (v.length !== 4) return ["Postcodes have 4 digits, e.g. 6027. Or type the suburb name."];
+      if (+v < 6000 || +v > 6999) return ["That's not a WA postcode (they run 6000–6999). We work across Perth and the South West."];
+      return [null, v, `Postcode ${v}`];
+    }
+    if (/\d/.test(v)) return ["Please type just the suburb name or just the postcode, e.g. Joondalup or 6027."];
+    if (!/^\p{L}[\p{L}' .-]*$/u.test(v)) return ["Please use letters only for the suburb name."];
+    if (v.length < 3) return ["That's too short. Please type the full suburb name."];
+    if (v.length > 30) return ["That's too long for a suburb name."];
+    return [null, titleCase(v)];
+  };
+
+  /* ---------- state, estimate, progress, resume ---------- */
+  const fresh = () => ({ services: [], kind: {}, size: {}, sure: {} });
+  const ballpark = () => {
+    let lo = 0, hi = 0;
+    S.services.forEach(s => { if (S.kind[s] == null || S.size[s] == null) return; const [a, b] = RATE[s](S.kind[s]); lo += a * S.size[s]; hi += b * S.size[s]; });
+    return hi ? [lo, hi] : null;
+  };
+  const r100 = n => "$" + (Math.round(n / 100) * 100).toLocaleString("en-AU");
+  const showEstimate = () => { const b = ballpark(); estCard.hidden = !b; if (b) estVal.textContent = `${r100(b[0])} – ${r100(b[1])}`; };
+  const order = () => ["services", ...S.services.flatMap(s => ["kind:" + s, "size:" + s]), "suburb", "when", "access", "notes", "name", "phone", "email", "method", ...(S.method === "Phone call" ? ["time"] : []), "review"];
+  const has = id => {
+    const [k, s] = id.split(":");
+    if (k === "services") return S.services.length > 0;
+    if (k === "review") return false;
+    return s ? S[k][s] != null : S[k] != null;
+  };
+  const setProgress = id => {
+    const o = order(), i = Math.max(0, o.indexOf(id)), pct = id === "done" ? 100 : Math.round(i / (o.length - 1) * 100);
+    $("i", chatBar).style.width = pct + "%"; chatBar.setAttribute("aria-valuenow", pct);
+    stepTxt.innerHTML = id === "done" ? `<span class="dot"></span>Brief sent` : id === "review" ? `<span class="dot"></span>Review your brief` : `<span class="dot"></span>Step ${i + 1} of ${o.length - 1}`;
+  };
+  const save = id => { try { localStorage.setItem(STORE, JSON.stringify({ S, id, t: Date.now() })); } catch (e) {} };
+  const load = () => { try { const d = JSON.parse(localStorage.getItem(STORE)); return d && d.S && d.S.services.length && Date.now() - d.t < 7 * 864e5 ? d : null; } catch (e) { return null; } };
+  const forget = () => { try { localStorage.removeItem(STORE); } catch (e) {} };
+
+  /* ---------- the steps ---------- */
+  const STEP = {
+    services: async (_, back, first) => {
+      await say(first ? "First up: what are we building? Pick as many as you like." : "What are we building? Pick as many as you like.");
+      const v = await options(Object.keys(FOLLOW), { multi: true, sel: S.services, back }); if (v === BACK) return BACK;
+      S.services = v;
+      Object.keys(S.kind).forEach(s => { if (!v.includes(s)) { delete S.kind[s]; delete S.size[s]; delete S.sure[s]; } });
+      showEstimate();
+      if (v.length > 1) await say("Nice combo. Doing it all in one job usually saves time and money.");
+    },
+    kind: async (svc, back) => {
+      const f = FOLLOW[svc]; await say(`<b>${svc}.</b> ${f.q}`);
+      const v = await options(f.o, { back }); if (v === BACK) return BACK;
+      S.kind[svc] = v[0];
+    },
+    size: async (svc, back) => {
+      const len = FOLLOW[svc].size === "length";
+      await say(len ? "And roughly how long, end to end?" : "Roughly how big is the area?");
+      const v = await slider(len ? { min: 2, max: 60, step: 1, val: S.size[svc] || 12, unit: "m", hint: "A standard suburban side boundary is about 30 m.", back }
+        : { min: 5, max: 300, step: 5, val: S.size[svc] || 40, unit: "m²", hint: "For scale, a double garage is about 36 m².", back });
+      if (v === BACK) return BACK;
+      S.size[svc] = v.v; S.sure[svc] = v.sure; showEstimate();
+    },
+    suburb: async (_, back) => {
+      await say("Which suburb is the property in? (Or the postcode.)");
+      const v = await ask({ ph: "e.g. Joondalup or 6027", ac: "address-level2", max: 30, list: "suburbList", val: S.suburb || "", check: checkSuburb, back });
+      if (v === BACK) return BACK;
+      if (/^\d+$/.test(v)) { S.suburb = v; return say(`Postcode ${v}, got it. We'll confirm the exact spot when we call.`); }
+      const known = SUBURBS.find(s => s.toLowerCase() === v.toLowerCase());
+      const near = !known && SUBURBS.map(s => [s, lev(s.toLowerCase(), v.toLowerCase())]).sort((a, b) => a[1] - b[1])[0];
+      if (near && near[1] <= 2) {
+        await say(`Did you mean <b>${near[0]}</b>?`);
+        const [c] = await options([`Yes, ${near[0]}`, `No, it's ${v}`]);
+        S.suburb = c.startsWith("Yes") ? near[0] : v;
+      } else S.suburb = known || v;
+      await say(SUBURBS.includes(S.suburb) ? `${S.suburb}, great. That's within our Perth service area.` : `Thanks. We cover the whole Perth metro area, and we'll confirm ${esc(S.suburb)} when we call.`);
+    },
+    when: async (_, back) => {
+      await say("When are you hoping to get started?");
+      const v = await options(["As soon as possible", "In 1–3 months", "In 3–6 months", "Just planning for now"], { back }); if (v === BACK) return BACK;
+      S.when = v[0];
+    },
+    access: async (_, back) => {
+      await say("How easy is it to get machinery to the work area?");
+      const v = await options(["Wide side access (bobcat fits)", "Narrow, walk-through only", "Only through the house", "Not sure"], { back }); if (v === BACK) return BACK;
+      S.access = v[0];
+    },
+    notes: async (_, back) => {
+      await say("Anything else we should know? Slopes, old paving to remove, pets, a deadline…");
+      const v = await ask({ ph: "Tell us anything (optional)…", max: 500, val: S.notes || "", back, skip: "Nothing else",
+        check: v => v.length < 3 ? ["Could you add a little more detail? Or tap “Nothing else”."] : [null, v] });
+      if (v === BACK) return BACK;
+      S.notes = v === SKIP ? "" : v;
+    },
+    name: async (_, back) => {
+      await say("Almost done. What's your name?");
+      const v = await ask({ ph: "Your name", ac: "name", max: 40, val: S.name || "", check: checkName, back }); if (v === BACK) return BACK;
+      S.name = v;
+    },
+    phone: async (_, back) => {
+      await say(`Thanks, ${esc(S.name.split(" ")[0])}. What's the best phone number for you?`);
+      const v = await ask({ ph: "e.g. 0412 345 678", type: "tel", mode: "tel", ac: "tel", max: 20, val: S.phone || "", check: checkPhone, back }); if (v === BACK) return BACK;
+      S.phone = v;
+    },
+    email: async (_, back) => {
+      await say("And your email, so we can send the written quote?");
+      for (;;) {
+        const v = await ask({ ph: "name@example.com", type: "email", mode: "email", ac: "email", max: 80, val: S.email || "", check: checkEmail, back }); if (v === BACK) return BACK;
+        const [u, d] = v.split("@"), fix = fixDomain(d);
+        if (fix === d) { S.email = v; return; }
+        await say(`Did you mean <b>${esc(u + "@" + fix)}</b>?`);
+        const [c] = await options([`Yes, use @${fix}`, `No, @${d} is right`, "Let me retype it"]);
+        if (c.startsWith("Yes")) { S.email = u + "@" + fix; return; }
+        if (c.startsWith("No")) { S.email = v; return; }
+        S.email = null;
+      }
+    },
+    method: async (_, back) => {
+      await say("How would you prefer we get in touch?");
+      const v = await options(["Phone call", "Text message", "Email"], { back }); if (v === BACK) return BACK;
+      S.method = v[0]; if (S.method !== "Phone call") S.time = null;
+    },
+    time: async (_, back) => {
+      await say("When's the best time to call?");
+      const v = await options(["Morning", "Afternoon", "After 5 pm", "Any time"], { back }); if (v === BACK) return BACK;
+      S.time = v[0];
+    },
+    review: async () => {
+      const b = ballpark(); showEstimate();
+      const row = (k, v, edit) => `<dt>${k}</dt><dd><span>${v}</span><button type="button" class="sum-edit" data-edit="${edit}" aria-label="Edit ${k.replace(/<[^>]+>/g, "")}">Edit</button></dd>`;
+      const rows = S.services.map(s => row(esc(s), `${esc(S.kind[s])} · ${S.sure[s] ? "~" : "size TBC, ~"}${S.size[s]} ${unitOf(s)}`, "kind:" + s)).join("")
+        + row("Suburb", esc(S.suburb), "suburb") + row("Start", esc(S.when), "when") + row("Access", esc(S.access), "access")
+        + (S.notes ? row("Notes", esc(S.notes), "notes") : "")
+        + row("Name", esc(S.name), "name") + row("Phone", esc(S.phone), "phone") + row("Email", esc(S.email), "email")
+        + row("Contact by", esc(S.method + (S.time ? ` · ${S.time}` : "")), "method");
+      await say("Here's your project brief. Tap <b>Edit</b> on anything that needs changing.");
+      const sum = document.createElement("div"); sum.className = "summary";
+      sum.innerHTML = `<dl>${rows}<dt>Ballpark</dt><dd><b>${b ? `${r100(b[0])} – ${r100(b[1])}` : "TBC"}</b></dd></dl>`;
+      log.appendChild(sum); scrollLog();
+      await say("The ballpark uses typical Perth rates. Your exact price comes after a free site visit. Ready to send this to the team?");
+      const pick = options(["Send my brief", "Add another service", "Start over"]);
+      const editing = new Promise(res => sum.addEventListener("click", e => { const t = e.target.closest("[data-edit]"); if (t) { pick.drop(); bubble(`Edit ${esc(t.getAttribute("aria-label").slice(5))}`, "me"); res({ edit: t.dataset.edit }); } }));
+      const r = await Promise.race([pick, editing]);
+      sum.classList.add("locked");
+      if (r.edit) return r;
+      if (r[0] === "Start over") { forget(); return { restart: true }; }
+      if (r[0] === "Add another service") return { edit: "services" };
+      return { send: true };
+    },
+  };
+  const runStep = (id, back, first) => { const [k, s] = id.split(":"); return STEP[k](s, back, first); };
+
+  /* ---------- sending ---------- */
+  const brief = ref => {
+    const b = ballpark();
+    return {
+      _subject: `New project brief ${ref}: ${S.name} (${S.suburb})`, _template: "table", _captcha: "false", _replyto: S.email,
+      "Reference": ref, "Name": S.name, "Phone": S.phone, "Email": S.email,
+      "Preferred contact": S.method + (S.time ? ` (${S.time})` : ""),
+      "Suburb / postcode": S.suburb,
+      "Services": S.services.map(s => `${s}: ${S.kind[s]}, ${S.sure[s] ? "about" : "size not sure, assumed"} ${S.size[s]} ${unitOf(s)}`).join(" | "),
+      "Start": S.when, "Site access": S.access, "Notes": S.notes || "None",
+      "Ballpark shown": b ? `${r100(b[0])} – ${r100(b[1])}` : "TBC",
+      "Submitted": new Date().toLocaleString("en-AU", { timeZone: "Australia/Perth" }) + " (Perth time)",
+    };
+  };
+  const mailtoLink = data => `mailto:${INBOX}?subject=${encodeURIComponent(data._subject)}&body=${encodeURIComponent(Object.entries(data).filter(([k]) => k[0] !== "_").map(([k, v]) => `${k}: ${v}`).join("\n"))}`;
+  const sendBrief = async () => {
+    const g = GEN, ref = "GW-" + Date.now().toString(36).slice(-5).toUpperCase(), data = brief(ref);
+    for (;;) {
+      setProgress("review");
+      const t = bubble(`<span class="sending"><i></i>Sending your brief…</span>`);
+      let ok = false;
+      try {
+        const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+        const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(data), signal: ctl.signal });
+        clearTimeout(timer);
+        const j = await r.json().catch(() => ({}));
+        ok = r.ok && String(j.success) === "true";
+        if (!ok && /activat/i.test(j.message || "")) console.warn("FormSubmit: open the activation email sent to " + INBOX + " and click Activate Form.");
+      } catch (e) { ok = false; }
+      t.remove(); if (g !== GEN) return;
+      if (ok) {
+        forget(); setProgress("done");
+        await say([`Sent! 🎉 Thanks, ${esc(S.name.split(" ")[0])}.`, `Your reference is <b class="ref">${ref}</b>. A GreenWA team member will ${S.method === "Email" ? "email you" : S.method === "Text message" ? "text you" : "call you"} within one business day to book your free site visit.`]);
+        const [again] = await options(["Plan another project"]); if (again) run(null, true);
+        return;
+      }
+      await say(navigator.onLine === false ? "Looks like you're offline, so the brief didn't send. Nothing is lost." : "Sorry, the brief didn't go through. Nothing is lost.");
+      const [c] = await options(["Try again", "Send it by email instead"]);
+      if (c === "Try again") continue;
+      const link = mailtoLink(data);
+      await say(`I've opened your email app with the brief filled in. If nothing opened, <a href="${esc(link)}">tap here</a> or email us at <a href="mailto:${INBOX}">${INBOX}</a>.`);
+      location.href = link;
+      return;
+    }
+  };
+
+  /* ---------- the engine: walks the steps, supports back, edit and resume ---------- */
+  const flow = async (id, trail = [], editing = false) => {
+    const g = GEN;
+    while (g === GEN) {
+      setProgress(id); save(id);
+      const r = await runStep(id, trail.length > 0, trail.length === 0);
+      if (g !== GEN) return;
+      if (r === BACK) { id = editing ? "review" : (trail.pop() || id); editing = false; continue; }
+      if (r && r.restart) return run(null, true);
+      if (r && r.send) return sendBrief();
+      if (r && r.edit) { trail.push(id); id = r.edit; editing = true; continue; }
+      trail.push(id);
+      const o = order();
+      // after an edit, jump straight back to the review (asking anything new first)
+      id = editing ? (id.startsWith("kind:") ? "size:" + id.slice(5) : o.find(x => !has(x)) || "review") : o[o.indexOf(id) + 1];
+      if (id === "review") editing = false;
+    }
+  };
+
+  const run = async (preset, skipResume) => {
+    GEN++; busy = false; waitText = null; input.disabled = send.disabled = true; showErr("");
+    log.innerHTML = ""; estCard.hidden = true; S = fresh();
+    const saved = !preset && !skipResume && load();
+    if (saved) {
+      await say(["Welcome back! 👋", "You were part-way through a project brief. Want to pick up where you left off?"]);
+      const [c] = await options(["Continue my brief", "Start fresh"]);
+      if (c.startsWith("Continue")) { S = Object.assign(fresh(), saved.S); showEstimate(); return flow(saved.id in STEP || saved.id.includes(":") ? saved.id : "services", ["services"]); }
+      forget(); log.innerHTML = "";
+    }
     if (preset) {
       await say([`Hi! Let's plan your <b>${esc(preset)}</b> project. 👋`, "A few quick questions and I'll put together your brief, plus a ballpark price."]);
       await say("Anything else to add to the same job? Tap any extras, or just tap Done.");
-      S.services = [preset, ...await options(Object.keys(FOLLOW).filter(s => s !== preset), { multi: true, optional: true })];
-    } else {
-      await say(["Hi! I'm the GreenWA project planner. 👋", "Answer a few quick questions and I'll put together your brief, plus a ballpark price.", "First up: what are we building? Pick as many as you like."]);
-      S.services = await options(Object.keys(FOLLOW), { multi: true });
+      const extra = await options(Object.keys(FOLLOW).filter(s => s !== preset), { multi: true, optional: true });
+      S.services = [preset, ...extra];
+      return flow("kind:" + preset, ["services"]);
     }
-    if (S.services.length > 1) await say("Nice combo. Doing it all in one job usually saves time and money.");
-    for (const svc of S.services) {
-      const f = FOLLOW[svc];
-      await say(`<b>${svc}.</b> ${f.q}`);
-      const [a] = await options(f.o);
-      let size;
-      if (f.size === "length") {
-        await say("And roughly how long, end to end?");
-        size = await slider({ min: 2, max: 60, step: 1, val: 12, unit: "m", hint: "A standard suburban side boundary is about 30 m." });
-      } else {
-        await say("Roughly how big is the area?");
-        size = await slider({ min: 5, max: 300, step: 5, val: 40, unit: "m²", hint: "For scale, a double garage is about 36 m²." });
-      }
-      S.details[svc] = { a, size };
-    }
-    await say("Which suburb is the property in?");
-    S.suburb = await ask("e.g. Joondalup", v => v.length < 2 ? "Could you type the suburb name?" : null);
-    const known = SUBURBS.find(s => s.toLowerCase() === S.suburb.toLowerCase());
-    await say(known ? `${known}, great. That's within our Perth service area.` : `Thanks. We cover the whole Perth metro area, and we'll confirm ${esc(S.suburb)} when we call.`);
-    await say("When are you hoping to get started?");
-    [S.when] = await options(["As soon as possible", "In 1–3 months", "In 3–6 months", "Just planning for now"]);
-    await say("Anything we should know? Slopes, tight access, pets, a deadline like a party… (or type “no”)");
-    S.notes = await ask("Tell us anything…");
-    await say("Almost done. What's your first name?");
-    S.name = await ask("First name", v => v.length < 2 ? "Just your first name is fine." : null);
-    await say(`Thanks, ${esc(S.name)}. What's the best phone or email to reach you?`);
-    S.contact = await ask("Phone or email", v => /\S+@\S+\.\S+/.test(v) || v.replace(/\D/g, "").length >= 8 ? null : "That doesn't look like a phone number or email. Could you check it?");
-
-    // ballpark
-    let lo = 0, hi = 0;
-    S.services.forEach(s => { const d = S.details[s], [a, b] = RATE[s](d.a); lo += a * d.size; hi += b * d.size; });
-    const r100 = n => "$" + (Math.round(n / 100) * 100).toLocaleString("en-AU");
-    estVal.textContent = `${r100(lo)} – ${r100(hi)}`; estCard.hidden = false;
-
-    const rows = S.services.map(s => `<dt>${esc(s)}</dt><dd>${esc(S.details[s].a)} · ~${S.details[s].size} ${s === "Retaining walls" ? "m" : "m²"}</dd>`).join("");
-    await say(["Here's your project brief:"]);
-    const sum = document.createElement("div"); sum.className = "summary";
-    sum.innerHTML = `<dl>${rows}<dt>Suburb</dt><dd>${esc(S.suburb)}</dd><dt>Start</dt><dd>${esc(S.when)}</dd>${/^no\.?$/i.test(S.notes) ? "" : `<dt>Notes</dt><dd>${esc(S.notes)}</dd>`}<dt>Contact</dt><dd>${esc(S.name)} · ${esc(S.contact)}</dd><dt>Ballpark</dt><dd><b>${r100(lo)} – ${r100(hi)}</b></dd></dl>`;
-    log.appendChild(sum); scrollLog();
-    await say("That ballpark is based on typical Perth rates. Your exact price comes after a free site visit. Shall I send this brief to the team?");
-    const [ok] = await options(["Yes, send it", "Start over"]);
-    if (ok === "Start over") return run();
-    await say([`Done, ${esc(S.name)}! 🎉 A GreenWA team member will be in touch within one business day to book your site visit.`, "<small class='muted'>(Demo site: on the live site this brief goes straight to the GreenWA inbox.)</small>"]);
-    const [again] = await options(["Plan another project"]); if (again) run();
+    await say(["Hi! I'm the GreenWA project planner. 👋", "Answer a few quick questions and I'll put together your brief, plus a ballpark price. You can go back or edit anything before it's sent."]);
+    flow("services");
   };
 
   let started = false;
   const start = () => { if (!started) { started = true; run(); } };
   new IntersectionObserver(([e]) => e.isIntersecting && start(), { threshold: 0.35 }).observe($("#chat"));
-  $("#chatReset").addEventListener("click", () => { started = true; run(); });
+  $("#chatReset").addEventListener("click", () => { started = true; forget(); run(null, true); });
   $$("[data-ask]").forEach(b => b.addEventListener("click", () => {
     goTo(quote); started = true; run(b.dataset.ask);
   }));
