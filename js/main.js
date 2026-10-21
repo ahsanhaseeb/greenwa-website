@@ -614,6 +614,28 @@
     if (memo.get(fn) === k) return; memo.set(fn, k); fn(p);
   };
   const fab = $(".fab"), quote = $("#quote"), wallPin = $("#wallBuild");
+
+  /* ---------- back to top: every build shows finished while the page rewinds ---------- */
+  const totop = $(".totop"), totopLabel = $(".totop-label", totop);
+  const phone = matchMedia("(max-width: 560px)");
+  let rewinding = false, rewindTimer = 0;
+  const endRewind = () => {
+    if (!rewinding) return;
+    rewinding = false; clearTimeout(rewindTimer);
+    totop.classList.remove("going"); totopLabel.textContent = "Back to top";
+  };
+  totop.addEventListener("click", () => {
+    if (rewinding) return;
+    const dur = phone.matches ? clamp(scrollY / vh * 0.03, 0.6, 1.1) : clamp(scrollY / vh * 0.12, 1.1, 2.4);   // phones: the page is many screens tall, so go faster
+    rewinding = true; totop.classList.add("going"); totopLabel.textContent = "Going up…";
+    rewindTimer = setTimeout(endRewind, dur * 1000 + 800);   // safety net if the scroll is cut short
+    if (lenis) lenis.scrollTo(0, { duration: dur, easing: t => 1 - Math.pow(1 - t, 4), lock: true, force: true, onComplete: endRewind });
+    else scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    const first = $("#nav a"); first && first.focus({ preventScroll: true });   // keyboard users land back at the top too
+  });
+  // pinned scenes read this: a finished model while rewinding, otherwise the live scroll position
+  const scene = el => reduce || rewinding ? 1 : secProgress(el);
+
   const frame = () => {
     const y = scrollY;
     if (Math.abs(y - lastY) > 4) { nav.classList.toggle("hide", y > lastY && y > 400 && !nav.classList.contains("open")); lastY = y; }
@@ -629,18 +651,24 @@
     // only animate scenes that are actually on screen
     tiltX += (tiltTX - tiltX) * 0.08; tiltY += (tiltTY - tiltY) * 0.08;
     if (Math.abs(tiltTX - tiltX) < 0.001) tiltX = tiltTX; if (Math.abs(tiltTY - tiltY) < 0.001) tiltY = tiltTY;
-    drive(markScene, markSec, reduce ? 1 : secProgress(markSec));
-    drive(layersScene, layersSec, reduce ? 1 : secProgress(layersSec));
+    drive(markScene, markSec, scene(markSec));
+    drive(layersScene, layersSec, scene(layersSec));
     drive(servicesScene, svcSec, secProgress(svcSec));
-    drive(wallScene, wallPin, reduce ? 1 : secProgress(wallPin));
-    drive(grassScene, grassPin, reduce ? 1 : secProgress(grassPin));
+    drive(wallScene, wallPin, scene(wallPin));
+    drive(grassScene, grassPin, scene(grassPin));
     if (vw > 960) {                    // pinned: the line runs left to right and lights each step as it arrives
-      const d = reduce ? 1 : ease(seg(secProgress(procSec), 0.06, 0.8)), sw = steps.clientWidth;
+      const d = reduce || rewinding ? 1 : ease(seg(secProgress(procSec), 0.06, 0.8)), sw = steps.clientWidth;
       stepsLine.style.transform = `scaleX(${d.toFixed(4)})`;
       stepEls.forEach(s => s.classList.toggle("on", d >= s.offsetLeft / sw - 0.002));
     }
     const qr = quote.getBoundingClientRect();
-    fab.classList.toggle("show", y > vh * 0.9 && !(qr.top < vh && qr.bottom > 0));
+    const fabOn = y > vh * 0.9 && !(qr.top < vh && qr.bottom > 0);
+    fab.classList.toggle("show", fabOn);
+    totop.classList.toggle("show", y > vh * 0.9 || rewinding);
+    totop.classList.toggle("solo", !fabOn);
+    const max = document.documentElement.scrollHeight - vh;
+    totop.style.setProperty("--p", max > 0 ? clamp(y / max).toFixed(3) : 0);
+    if (rewinding && y < 2) endRewind();
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

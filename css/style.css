@@ -373,6 +373,20 @@ p { margin: 0; }
 .fab.show { transform: none; }
 .fab-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); animation: pulse 1.8s infinite; }
 
+/* back to top — centre bottom; the ring fills as you scroll down the page */
+.totop { position: fixed; left: 50%; bottom: 18px; z-index: 40; display: flex; align-items: center; gap: .55rem; padding: .4rem 1.1rem .4rem .4rem; border: 1px solid rgb(255 255 255 / .14); border-radius: 99px; background: rgb(18 20 17 / .88); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--paper); font: 600 .78rem/1 var(--f-mono); text-transform: uppercase; letter-spacing: .06em; cursor: pointer; box-shadow: 0 12px 30px rgb(18 20 17 / .3); transform: translate(-50%, 160%); transition: transform .45s cubic-bezier(.3,1.4,.5,1), background .25s; }
+.totop.show { transform: translate(-50%, 0); }
+.totop:hover { background: var(--brand-deep); }
+.totop:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.totop-ring { position: relative; width: 36px; height: 36px; flex: none; }
+.totop-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.totop-ring circle { fill: none; stroke: rgb(255 255 255 / .16); stroke-width: 2.5; }
+.totop-ring .totop-fill { stroke: var(--brand); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p, 0)); transform: rotate(-90deg); transform-origin: center; }
+.totop-arrow { inset: 9px !important; width: 18px !important; height: 18px !important; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform .3s; }
+.totop:hover .totop-arrow { transform: translateY(-2px); }
+.totop.going .totop-arrow { animation: totop-lift .7s ease-in-out infinite; }
+@keyframes totop-lift { 50% { transform: translateY(-4px); } }
+
 /* ---------- reveal ---------- */
 .reveal { opacity: 0; transform: translateY(30px); transition: opacity .8s, transform .8s cubic-bezier(.2,.8,.2,1); }
 .reveal.in { opacity: 1; transform: none; }
@@ -412,6 +426,14 @@ p { margin: 0; }
   .hb { flex-basis: 60px; }
   .hero-bricks { height: 50px; }
   .fab { left: 16px; right: 16px; justify-content: center; }
+  /* phones: one bottom row — "Plan my project" shrinks and a round arrow button sits beside it, so nothing stacks over the page */
+  .fab { right: 80px; }
+  .totop { left: auto; right: 16px; bottom: 18px; width: 52px; height: 52px; padding: 0; gap: 0; justify-content: center; transform: translateY(160%); transition: transform .45s cubic-bezier(.3,1.4,.5,1), background .25s, right .35s; }
+  .totop.show { transform: none; }
+  .totop.solo { right: calc(50% - 26px); }   /* the bar is hidden, so the arrow takes the centre */
+  .totop-ring { width: 44px; height: 44px; }
+  .totop-arrow { inset: 13px !important; }
+  .totop-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -363,7 +363,7 @@
         <div><b>GreenWA project planner</b><small><span class="dot"></span>Online · replies instantly</small></div>
         <button class="chat-reset" id="chatReset" title="Start again" aria-label="Start again">↺</button>
       </div>
-      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-log" id="chatLog" data-lenis-prevent></div>
       <form class="chat-input" id="chatForm" autocomplete="on">
         <input id="chatText" type="text" placeholder="Type your answer…" aria-label="Your answer" disabled>
         <button class="btn btn-solid" type="submit" disabled id="chatSend">Send</button>
@@ -427,6 +427,11 @@
 <a class="fab" href="#quote" data-start-chat aria-label="Plan my project">
   <span class="fab-dot"></span> Plan my project
 </a>
+
+<button class="totop" type="button" aria-label="Back to top">
+  <span class="totop-ring" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16"/><circle class="totop-fill" cx="18" cy="18" r="16" pathLength="1"/></svg><svg class="totop-arrow" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg></span>
+  <span class="totop-label">Back to top</span>
+</button>
 
 <div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Project photo" hidden>
   <figure class="lb-fig"><img alt=""><figcaption><span class="lb-cap"></span><span class="lb-count"></span></figcaption></figure>
