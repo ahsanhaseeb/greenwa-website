@@ -1073,15 +1073,18 @@
     for (;;) {
       setProgress("review");
       const t = bubble(`<span class="sending"><i></i>Sending your brief…</span>`);
-      let ok = false;
+      let ok = false, slow = false;
+      // wait for FormSubmit's real answer; if it is slow, say so instead of giving up.
+      // The 3-minute cut-off only catches a connection that is truly stuck.
+      const hint = setTimeout(() => { const s = t.querySelector(".sending"); if (s) s.innerHTML = "<i></i>Still sending, the mail service is a bit slow. Please keep this page open…"; }, 8000);
+      const ctl = new AbortController(), stuck = setTimeout(() => { slow = true; ctl.abort(); }, 180000);
       try {
-        const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
         const r = await fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(data), signal: ctl.signal });
-        clearTimeout(timer);
         const j = await r.json().catch(() => ({}));
         ok = r.ok && String(j.success) === "true";
         if (!ok && /activat/i.test(j.message || "")) console.warn("FormSubmit: the form needs activating from the inbox email.");
       } catch (e) { ok = false; }
+      clearTimeout(hint); clearTimeout(stuck);
       t.remove(); if (g !== GEN) return;
       if (ok) {
         forget(); setProgress("done");
@@ -1089,7 +1092,9 @@
         const [again] = await options(["Plan another project"]); if (again) run(null, true);
         return;
       }
-      await say(navigator.onLine === false ? "Looks like you're offline, so the brief didn't send. Nothing is lost." : "Sorry, the brief didn't go through. Nothing is lost.");
+      await say(navigator.onLine === false ? "Looks like you're offline, so the brief didn't send. Nothing is lost."
+        : slow ? `Our mail service is slow right now, so I couldn't confirm it arrived. It may still reach us (your reference is <b class="ref">${ref}</b>). Nothing is lost.`
+        : "Sorry, the brief didn't go through. Nothing is lost.");
       const [c] = await options(["Try again", "Send it by email instead"]);
       if (c === "Try again") continue;
       const link = mailtoLink(data);
